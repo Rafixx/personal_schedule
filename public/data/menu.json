@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "metadata": { "updatedAt": "2025-08-20T22:00:00Z", "tz": "Europe/Madrid" },
+  "dishes": [
+    {
+      "id": "lentejas",
+      "name": "Lentejas con verduras",
+      "tags": ["legumbre", "batch", "tupper"],
+      "time": 45,
+      "ingredients": ["lentejas", "zanahoria", "pimiento", "cebolla", "tomate"]
+    }
+  ],
+  "months": [
+    {
+      "year": 2025,
+      "month": 9,
+      "plan": {
+        "2025-09-01": ["lentejas"],
+        "2025-09-02": []
+      }
+    }
+  ],
+  "rules": { "weekdaysOnly": true, "maxPerDay": 1 }
+}

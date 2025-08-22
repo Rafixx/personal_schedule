@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+      - run: pnpm install
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: node -e "const Ajv=require('ajv');const ajv=new Ajv();const schema=require('./schemas/menu.schema.json');const data=require('./public/data/menu.json');if(!ajv.validate(schema,data)){console.error(ajv.errors);process.exit(1);}"
