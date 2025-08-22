@@ -1,0 +1,15 @@
+.cell {
+  border: 1px solid #ccc;
+  min-height: 80px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.cell[data-over] {
+  background: #e0f7fa;
+}
+
+.date {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
