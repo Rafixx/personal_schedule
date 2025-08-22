@@ -1,0 +1,13 @@
+{
+  "name": "Personal Schedule",
+  "short_name": "Schedule",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone"
+}
