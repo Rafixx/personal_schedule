@@ -3,12 +3,13 @@ import { Dish, Ingredient, PlanEntry, ISODate, Slot } from '@/domain/types'
 
 export const getDishes = (): Promise<Dish[]> => db.dishes.toArray()
 
-export const putDish = (d: Dish): Promise<void> => db.dishes.put(d)
+export const putDish = (d: Dish): Promise<void> => db.dishes.put(d).then(() => {})
 
 export const getPlanEntriesByDates = (dates: ISODate[]): Promise<PlanEntry[]> =>
   db.planEntries.where('date').anyOf(dates).toArray()
 
-export const upsertPlanEntry = (entry: PlanEntry): Promise<void> => db.planEntries.put(entry)
+export const upsertPlanEntry = (entry: PlanEntry): Promise<void> =>
+  db.planEntries.put(entry).then(() => {})
 
 export const deletePlanEntry = (date: ISODate, slot: Slot): Promise<void> =>
   db.planEntries.delete([date, slot])

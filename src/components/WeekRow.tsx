@@ -1,3 +1,4 @@
+// WeekRow.tsx
 import { DndContext, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { DayCell } from './DayCell'
@@ -10,12 +11,12 @@ interface Props {
 
 export const WeekRow = ({ dates }: Props) => {
   const moveEntry = usePlannerStore(s => s.moveEntry)
+
   const handleDragEnd = (e: DragEndEvent) => {
     const from = e.active.id as ISODate
     const to = e.over?.id as ISODate | undefined
-    if (to && from !== to) {
-      void moveEntry(from, to)
-    }
+    if (!to || from === to) return
+    void moveEntry(from, to)
   }
 
   return (

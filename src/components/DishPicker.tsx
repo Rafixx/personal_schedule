@@ -1,4 +1,5 @@
-import { useState } from 'react'
+// DishPicker.tsx
+import { useMemo, useState } from 'react'
 import { ISODate } from '@/domain/types'
 import { usePlannerStore } from '@/store/plannerStore'
 
@@ -8,10 +9,15 @@ interface Props {
 }
 
 export const DishPicker = ({ date, onClose }: Props) => {
-  const dishes = usePlannerStore(s => Object.values(s.dishesById))
+  const dishesById = usePlannerStore(s => s.dishesById)
+  const dishes = useMemo(() => Object.values(dishesById), [dishesById])
   const setEntry = usePlannerStore(s => s.setEntry)
   const [filter, setFilter] = useState('')
-  const filtered = dishes.filter(d => d.name.toLowerCase().includes(filter.toLowerCase()))
+
+  const filtered = useMemo(
+    () => dishes.filter(d => d.name.toLowerCase().includes(filter.toLowerCase())),
+    [dishes, filter]
+  )
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">

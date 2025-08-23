@@ -6,9 +6,11 @@ import { toISO } from '@/utils/date'
 import { usePlannerStore } from '@/store/plannerStore'
 
 const mondayOf = (d: Date): Date => {
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  return new Date(d.setDate(diff))
+  const copy = new Date(d) // <- no mutar d
+  const day = copy.getDay()
+  const diff = copy.getDate() - day + (day === 0 ? -6 : 1)
+  copy.setDate(diff)
+  return copy
 }
 
 const shiftISO = (iso: ISODate, days: number): ISODate => {
@@ -22,6 +24,15 @@ export const PlannerPage = () => {
   const weeks = 4
 
   useEffect(() => {
+    // establece lunes de esta semana una sola vez
+    const today = new Date()
+    const day = today.getDay()
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1) // lunes
+    const monday = new Date(today)
+    monday.setDate(diff)
+    setStartMondayISO(toISO(monday))
+
+    // si siembras demo, hazlo una sola vez
     void usePlannerStore.getState().seedDemo()
   }, [])
 

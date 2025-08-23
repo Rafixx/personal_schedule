@@ -1,3 +1,4 @@
+// PlannerView.tsx
 import { useEffect, useMemo } from 'react'
 import { ISODate } from '@/domain/types'
 import { weeksRange } from '@/utils/date'
@@ -10,22 +11,22 @@ interface Props {
 }
 
 export const PlannerView = ({ startMondayISO, weeks = 4 }: Props) => {
-  const loadRange = usePlannerStore(s => s.loadRange)
   const dates = useMemo(() => weeksRange(startMondayISO, weeks), [startMondayISO, weeks])
 
   useEffect(() => {
-    void loadRange(dates)
-  }, [dates, loadRange])
+    void usePlannerStore.getState().loadRange(dates)
+  }, [dates])
 
-  const weeksDates: ISODate[][] = []
-  for (let i = 0; i < dates.length; i += 5) {
-    weeksDates.push(dates.slice(i, i + 5))
-  }
+  const weeksDates = useMemo(() => {
+    const out: ISODate[][] = []
+    for (let i = 0; i < dates.length; i += 5) out.push(dates.slice(i, i + 5))
+    return out
+  }, [dates])
 
   return (
     <div className="flex flex-col gap-4">
-      {weeksDates.map((d, i) => (
-        <WeekRow key={i} dates={d} />
+      {weeksDates.map(d => (
+        <WeekRow key={d[0]} dates={d} />
       ))}
     </div>
   )
