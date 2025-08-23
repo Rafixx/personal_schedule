@@ -1,11 +1,7 @@
-import { LucideHome, LucideFileText } from 'lucide-react'
+import { LucideCalendar, LucideShoppingCart, LucideUtensilsCrossed } from 'lucide-react'
 
 export const sideBarMenuItems = [
-  { path: '/dashboard', label: 'Inicio', icon: LucideHome },
-  { path: '/solicitudes', label: 'Solicitudes', icon: LucideFileText }
-]
-
-export const homePageMenuCards = [
-  // { path: '/dashboard', label: 'Inicio', icon: LucideHome },
-  { path: '/solicitudes', label: 'Solicitudes', icon: LucideFileText }
+  { path: '/planner', label: 'Planificador', icon: LucideCalendar },
+  { path: '/dishes', label: 'Platos', icon: LucideUtensilsCrossed },
+  { path: '/shopping', label: 'Lista de la compra', icon: LucideShoppingCart }
 ]
