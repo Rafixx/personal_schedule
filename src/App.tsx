@@ -1,12 +1,3 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Planner from './routes/Planner';
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Planner />} />
-      </Routes>
-    </BrowserRouter>
-  );
+export const App = () => {
+  return <div className="text-center text-2xl text-gray-700">Bienvenido a LIMS</div>
 }

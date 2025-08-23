@@ -1,41 +1,24 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+// vite.config.ts
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
-export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'prompt',
-      manifest: {
-        name: 'Menu Planner',
-        short_name: 'Planner',
-        start_url: '/',
-        display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#ffffff',
-        icons: [
-          {
-            src: '/icons/icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml'
-          }
-        ]
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd())
+
+  const processEnv = Object.keys(env)
+    .filter(key => key.startsWith('VITE_'))
+    .reduce(
+      (acc, key) => {
+        const newKey = key.replace(/^VITE_/, '')
+        acc[`process.env.${newKey}`] = JSON.stringify(env[key])
+        return acc
       },
-      workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: /\/data\/menu\.json$/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'menu-data'
-            }
-          }
-        ]
-      }
-    })
-  ],
-  test: {
-    environment: 'jsdom'
+      {} as Record<string, string>
+    )
+
+  return {
+    plugins: [react(), tsconfigPaths()],
+    define: processEnv
   }
-});
+})

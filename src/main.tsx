@@ -1,11 +1,15 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './styles/globals.css';
-import './pwa/registerSW';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { RouterProvider } from 'react-router-dom'
+import { router } from './shared/routes/routes'
+import { NotificationProvider } from './shared/components/Notification/NotificationContext'
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <NotificationProvider>
+      <RouterProvider router={router} />
+    </NotificationProvider>
   </React.StrictMode>
-);
+)
