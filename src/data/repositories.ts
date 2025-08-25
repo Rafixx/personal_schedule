@@ -5,6 +5,10 @@ export const getDishes = (): Promise<Dish[]> => db.dishes.toArray()
 
 export const putDish = (d: Dish): Promise<void> => db.dishes.put(d).then(() => {})
 
+export const getIngredients = (): Promise<Ingredient[]> => db.ingredients.toArray()
+
+export const putIngredient = (i: Ingredient): Promise<void> => db.ingredients.put(i).then(() => {})
+
 export const getPlanEntriesByDates = (dates: ISODate[]): Promise<PlanEntry[]> =>
   db.planEntries.where('date').anyOf(dates).toArray()
 

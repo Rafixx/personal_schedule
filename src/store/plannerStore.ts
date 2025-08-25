@@ -5,7 +5,8 @@ import {
   getPlanEntriesByDates,
   upsertPlanEntry,
   deletePlanEntry,
-  bulkSeed
+  bulkSeed,
+  putDish
 } from '@/data/repositories'
 import { demoDishes, demoIngredients } from '@/data/demo'
 
@@ -16,6 +17,7 @@ interface PlannerState {
   loadRange: (dates: ISODate[]) => Promise<void>
   setEntry: (date: ISODate, dishId: string | null) => Promise<void>
   moveEntry: (from: ISODate, to: ISODate) => Promise<void>
+  addDish: (dish: Dish) => Promise<void>
   seedDemo: () => Promise<void>
 }
 
@@ -71,6 +73,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     else await deletePlanEntry(from, 'comida')
 
     set(s => ({ planByDate: { ...s.planByDate, [from]: toDish, [to]: fromDish } }))
+  },
+  async addDish(dish) {
+    await putDish(dish)
+    set(s => ({ dishesById: { ...s.dishesById, [dish.id]: dish } }))
   },
   async seedDemo() {
     const dishes = await getDishes()

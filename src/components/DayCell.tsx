@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { Plus, Minus } from 'lucide-react'
 import { usePlannerStore } from '@/store/plannerStore'
 import { ISODate } from '@/domain/types'
 import { DishPicker } from './DishPicker'
@@ -28,18 +29,30 @@ export const DayCell = ({ date }: Props) => {
       className="p-4 bg-white rounded-xl shadow flex flex-col gap-2"
     >
       <div className="text-xs text-gray-500">{date}</div>
-      <button className="text-left flex-1" onClick={() => setOpen(true)}>
-        {dish ? dish.name : '— vacío —'}
-      </button>
-      {dish && (
+
+      {dish ? (
+        <div className="relative flex-1">
+          <button className="text-left w-full h-full" onClick={() => setOpen(true)}>
+            {dish.name}
+          </button>
+          <button
+            onClick={() => void setEntry(date, null)}
+            aria-label="Eliminar"
+            className="absolute bottom-0 right-0 text-red-500"
+          >
+            <Minus size={16} />
+          </button>
+        </div>
+      ) : (
         <button
-          onClick={() => void setEntry(date, null)}
-          aria-label="Eliminar"
-          className="text-red-500 text-xs self-end"
+          className="flex-1 flex items-center justify-center text-3xl text-gray-400 hover:text-gray-600"
+          onClick={() => setOpen(true)}
+          aria-label="Asignar plato"
         >
-          Eliminar
+          <Plus size={32} />
         </button>
       )}
+
       {open && <DishPicker date={date} onClose={() => setOpen(false)} />}
     </div>
   )
