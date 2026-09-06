@@ -30,7 +30,7 @@ Telegram/WhatsApp, sugerencia automática de menú.
 | `platos` | `id_plato, nombre, temporada, etiquetas, notas, activo` |
 | `ingredientes` | `id_ingrediente, nombre, proveedor, unidad_base, temporada, kcal_100, prot_100, carb_100, grasa_100` |
 | `ingredientes_platos` | `id, id_plato, id_ingrediente, cantidad, unidad` |
-| `plan` | `id, fecha, turno, id_plato, notas` |
+| `plan` | `id, fecha, turno, orden, id_plato, notas` |
 | `reglas` | `id, etiqueta, tipo, valor, activa` |
 | `proveedores` | `nombre, orden` |
 
@@ -65,9 +65,9 @@ Cada objeto incluye un campo interno `_row` que el frontend debe ignorar.
 
 | action | payload | result |
 |---|---|---|
-| `plan.set` | `{fecha, turno, id_plato, notas?}` | `{id}` |
-| `plan.delete` | `{fecha, turno}` | `{deleted}` |
-| `plan.move` | `{from:{fecha,turno}, to:{fecha,turno}}` | `{ok:true}` |
+| `plan.set` | `{fecha, turno, orden, id_plato, notas?}` | `{id}` |
+| `plan.delete` | `{fecha, turno, orden}` | `{deleted}` |
+| `plan.move` | `{from:{fecha,turno,orden}, to:{fecha,turno,orden}}` | `{ok:true}` |
 | `plato.upsert` | `{id_plato?, nombre, temporada, etiquetas, notas?, activo?}` | `{id_plato}` |
 | `plato.delete` | `{id_plato}` | `{deleted}` |
 | `ingrediente.upsert` | `{id_ingrediente?, nombre, proveedor?, unidad_base?, temporada?, kcal_100?, prot_100?, carb_100?, grasa_100?}` | `{id_ingrediente}` |
@@ -88,6 +88,12 @@ Script no responde y el navegador bloquea la petición.
 Nota de contrato: `plato.upsert` asume `activo:true` si se omite. El
 cliente debe enviar siempre `activo` explícito al editar un plato
 existente, o reactivará por accidente uno borrado.
+
+**Dos huecos por comida.** Cada día tiene hasta dos platos dentro del mismo
+`turno` (`orden: 1` = primero, `2` = segundo), validado en una maqueta de UX
+antes de tocar código (ver Artifact del planificador). `plan.move` con el
+mismo `fecha` en `from` y `to` pero distinto `orden` intercambia primero y
+segundo del mismo día, usando el mismo mecanismo que mover entre días.
 
 `admin.migrate` es una acción de mantenimiento idempotente (backfill de
 `activo`, corrección de nombres con erratas, `cantidad` de texto tipo
