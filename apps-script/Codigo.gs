@@ -57,12 +57,6 @@ function fraccionDesdeFecha_(fecha) {
   return dia / mes
 }
 
-function fraccionDesdeFecha_(fecha) {
-  var dia = Number(Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'd'))
-  var mes = Number(Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'M'))
-  return dia / mes
-}
-
 function sheetToObjects_(name) {
   var sheet = getSheet_(name)
   var values = sheet.getDataRange().getValues()
