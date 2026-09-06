@@ -226,4 +226,24 @@ de TanStack Query) contra este contrato sin más cambios en Apps Script.
 
 Pendiente para el plan del planificador: montar `QueryClientProvider` (con
 `persistQueryClient` + `idb-keyval` para offline) en `main.tsx`, y las mutaciones de
-`plato`/`ingrediente`/`regla` para la página de catálogo.
+`plato`/`ingrediente`/`regla` para la página de catálogo. Pendiente además tras el
+segundo hueco por comida (ver abajo): `PlanEntry` y `evaluarSemana` en `domain/`, y
+`planEntryRowSchema`/`mapPlanEntry`/`queries.ts` en `data/`, aún no incluyen `orden`.
+
+## Resultado de la verificación del segundo hueco (orden)
+
+Verificado el 2026-09-06 contra la API real ya desplegada, tras añadir `orden`
+a la pestaña `plan` y a `plan.set`/`plan.delete`/`plan.move`:
+
+| Prueba | Resultado |
+|---|---|
+| `bootstrap` tras redeploy | `ok:true`, catálogo intacto |
+| `plan.set` primero y segundo el mismo día | Dos filas independientes (`orden:1` e `2`), sin pisarse |
+| `plan.move` intercambiando primero↔segundo del mismo día | Confirmado vía lectura posterior: los `id_plato` quedan intercambiados |
+| `plan.delete` de un solo hueco | Borra solo esa fila; el otro hueco del mismo día permanece |
+| Limpieza final | `plan` queda vacío, sin residuos de la verificación |
+
+**Conclusión: segundo hueco por comida confirmado en la API.** El siguiente
+plan puede actualizar `domain/` y `data/` (tipos, `evaluarSemana`, esquemas,
+mappers, hooks) para soportar `orden`, y después construir la UI del
+planificador en React sobre la maqueta ya validada por Rafa.
