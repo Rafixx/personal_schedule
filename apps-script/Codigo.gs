@@ -51,6 +51,18 @@ function ensureSchema_() {
   planSheet.getRange(2, fechaCol, maxRows, 1).setNumberFormat('@')
 }
 
+function fraccionDesdeFecha_(fecha) {
+  var dia = Number(Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'd'))
+  var mes = Number(Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'M'))
+  return dia / mes
+}
+
+function fraccionDesdeFecha_(fecha) {
+  var dia = Number(Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'd'))
+  var mes = Number(Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'M'))
+  return dia / mes
+}
+
 function sheetToObjects_(name) {
   var sheet = getSheet_(name)
   var values = sheet.getDataRange().getValues()
@@ -328,8 +340,10 @@ function adminMigrate_() {
     'Moozzarela fresca': 'Mozzarella fresca',
     'Huevoss': 'Huevos',
     'Garbanzzos': 'Garbanzos',
-    'Arrroz basmati': 'Arroz basmati',
-    'Mira al talll': 'Mira al tall'
+    'Arrroz basmati': 'Arroz basmati'
+    // 'Mira al talll' no se corrige aquí: la celda del proveedor tiene una
+    // validación de datos (lista desplegable) que solo admite ese valor
+    // exacto. Corregirlo requiere editar la validación manualmente en Sheets.
   }
   var report = {
     activoBackfilled: 0,
@@ -371,9 +385,17 @@ function adminMigrate_() {
       filasVacias.push(row._row)
       return
     }
+    // Sheets a veces interpreta "1/2" escrito a mano como una fecha
+    // (1 de febrero) en vez de como texto; reconstruimos la fracción a
+    // partir del día/mes antes de forzar el formato numérico de la celda.
     if (typeof row.cantidad === 'string' && row.cantidad.indexOf('/') !== -1) {
       var parts = row.cantidad.split('/')
-      ipSheet.getRange(row._row, cantidadCol).setValue(Number(parts[0]) / Number(parts[1]))
+      var valorTexto = Number(parts[0]) / Number(parts[1])
+      ipSheet.getRange(row._row, cantidadCol).setValue(valorTexto).setNumberFormat('0.####')
+      report.cantidadesNormalizadas++
+    } else if (row.cantidad instanceof Date) {
+      var valorFecha = fraccionDesdeFecha_(row.cantidad)
+      ipSheet.getRange(row._row, cantidadCol).setValue(valorFecha).setNumberFormat('0.####')
       report.cantidadesNormalizadas++
     }
     if (String(row.unidad).trim().toLowerCase() === 'unidad') {
