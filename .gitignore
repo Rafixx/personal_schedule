@@ -1,0 +1,15 @@
+# dependencias
+node_modules/
+
+# build
+dist/
+web/dist/
+
+# entorno y secretos
+.env
+.env.local
+apps-script/.clasp.json
+
+# editor / SO
+.DS_Store
+*.log
