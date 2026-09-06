@@ -53,6 +53,7 @@ export const planEntryRowSchema = z.object({
   id: z.coerce.number().int(),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   turno: textoFlexible.pipe(z.string().min(1)),
+  orden: z.coerce.number().int().min(1).max(2),
   id_plato: z.coerce.number().int(),
   notas: textoFlexible
 })

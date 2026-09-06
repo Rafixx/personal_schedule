@@ -72,6 +72,7 @@ export function mapPlanEntry(row: z.infer<typeof planEntryRowSchema>): PlanEntry
     id: row.id,
     fecha: row.fecha,
     turno: row.turno as PlanEntry['turno'],
+    orden: row.orden as PlanEntry['orden'],
     idPlato: row.id_plato,
     notas: row.notas
   }

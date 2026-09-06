@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapIngrediente, mapPlato } from './mappers'
+import { mapIngrediente, mapPlanEntry, mapPlato } from './mappers'
 
 describe('mapPlato', () => {
   it('convierte temporada y etiquetas en listas, e ignora _row', () => {
@@ -60,5 +60,26 @@ describe('mapIngrediente', () => {
       grasa_100: undefined
     })
     expect(resultado.kcal100).toBeUndefined()
+  })
+})
+
+describe('mapPlanEntry', () => {
+  it('mapea orden e id_plato a idPlato', () => {
+    const resultado = mapPlanEntry({
+      id: 5,
+      fecha: '2026-09-07',
+      turno: 'COMIDA',
+      orden: 2,
+      id_plato: 3,
+      notas: ''
+    })
+    expect(resultado).toEqual({
+      id: 5,
+      fecha: '2026-09-07',
+      turno: 'COMIDA',
+      orden: 2,
+      idPlato: 3,
+      notas: ''
+    })
   })
 })

@@ -3,6 +3,7 @@ import {
   bootstrapEnvelopeSchema,
   ingredienteRowSchema,
   parseRows,
+  planEntryRowSchema,
   platoRowSchema
 } from './schemas'
 
@@ -100,6 +101,21 @@ describe('parseRows', () => {
     const { valid, invalid } = parseRows(platoRowSchema, filas)
     expect(valid).toHaveLength(1)
     expect(invalid).toHaveLength(1)
+  })
+})
+
+describe('planEntryRowSchema', () => {
+  it('coacciona orden a número', () => {
+    const resultado = planEntryRowSchema.safeParse({
+      id: 1,
+      fecha: '2026-09-07',
+      turno: 'COMIDA',
+      orden: '2',
+      id_plato: 3,
+      notas: ''
+    })
+    expect(resultado.success).toBe(true)
+    expect(resultado.success && resultado.data.orden).toBe(2)
   })
 })
 
