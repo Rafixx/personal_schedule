@@ -97,3 +97,29 @@ confirmar desde un navegador real que:
 Si el `POST` no pasa, la alternativa es tunelizar escrituras por `GET` con
 parámetros, o sustituir Apps Script por Sheets API v4 + OAuth (con el coste
 de login recurrente en la tablet que se quería evitar).
+
+## Resultado del spike de conectividad
+
+Verificado el 2026-09-06 desde un navegador real (Chrome, vía Chrome
+DevTools MCP) contra el Web App desplegado por Rafa, con el código de
+`apps-script/Codigo.gs`:
+
+| Prueba | Resultado |
+|---|---|
+| `GET ?probe=1` (primera llamada) | `200`, `1168 ms`, JSON correcto |
+| `POST` con `Content-Type: text/plain;charset=utf-8` | `200`, `953 ms`, `echoed` igual al body enviado |
+| `GET ?probe=warm` (segunda llamada) | `200`, `820 ms` |
+| Errores de CORS / preflight en consola | Ninguno |
+
+**Conclusión: API Apps Script confirmada.** GET y POST funcionan sin
+fricción de CORS con `Content-Type: text/plain`, y la latencia (820 ms –
+1.2 s) está muy por debajo del umbral informal de 3 s, incluso en la
+primera llamada tras el despliegue. No se midió un arranque en frío tras
+inactividad prolongada (horas); si en uso real la primera petición del día
+se siente lenta, se puede añadir una función `keepWarm` programada con un
+disparador horario de Apps Script, pero no se considera necesario a priori.
+
+Con esto queda despejado el único riesgo técnico de la arquitectura. El
+siguiente plan puede construir la API completa (todas las acciones de
+lectura/escritura descritas arriba) y la capa de datos del frontend sin
+más validaciones previas.
