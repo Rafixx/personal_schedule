@@ -30,24 +30,24 @@
 - Consumes: nada
 - Produces: repo con un único commit inicial en `main`, árbol de trabajo vacío salvo `.gitignore` y `README.md` mínimo. Todo lo posterior parte de aquí.
 
-- [ ] **Step 1: Crear el bundle de respaldo local**
+- [x] **Step 1: Crear el bundle de respaldo local**
 
 ```bash
 cd /home/rafa/dev/personal/personal_schedule
 git bundle create ~/personal_schedule-legacy.bundle --all
 ```
 
-- [ ] **Step 2: Verificar que el bundle es válido**
+- [x] **Step 2: Verificar que el bundle es válido**
 
 Run: `git bundle verify ~/personal_schedule-legacy.bundle`
 Expected: `The bundle records a complete history` (o similar mensaje de éxito), sin errores.
 
-- [ ] **Step 3: Confirmar el remoto configurado**
+- [x] **Step 3: Confirmar el remoto configurado**
 
 Run: `git remote -v`
 Expected: `origin  git@github.com:Rafixx/personal_schedule.git (fetch/push)`. Si no coincide, detente y confírmalo antes de continuar — el siguiente paso hace force-push.
 
-- [ ] **Step 4: Crear rama huérfana vacía**
+- [x] **Step 4: Crear rama huérfana vacía**
 
 ```bash
 git checkout --orphan reset-inicial
@@ -56,7 +56,7 @@ git rm -rf .
 
 Expected: `git status` muestra el árbol de trabajo vacío (sin archivos trackeados).
 
-- [ ] **Step 5: Escribir `.gitignore` mínimo**
+- [x] **Step 5: Escribir `.gitignore` mínimo**
 
 ```gitignore
 # dependencias
@@ -76,7 +76,7 @@ apps-script/.clasp.json
 *.log
 ```
 
-- [ ] **Step 6: Escribir `README.md` mínimo**
+- [x] **Step 6: Escribir `README.md` mínimo**
 
 ```markdown
 # Menú familiar
@@ -88,7 +88,7 @@ Ver `docs/specs/` para el diseño y `docs/superpowers/plans/` para los planes
 de implementación en curso.
 ```
 
-- [ ] **Step 7: Commit inicial y reemplazo de `main`**
+- [x] **Step 7: Commit inicial y reemplazo de `main`**
 
 ```bash
 git add .gitignore README.md
@@ -96,7 +96,7 @@ git commit -m "chore: reset del repo, arranque del proyecto de menú familiar"
 git branch -M main
 ```
 
-- [ ] **Step 8: Force-push a origin**
+- [x] **Step 8: Force-push a origin**
 
 ```bash
 git push origin main --force
@@ -104,7 +104,7 @@ git push origin main --force
 
 Expected: el push termina en éxito. Verificar en GitHub (o `git ls-remote origin main`) que el hash remoto coincide con `git rev-parse main` local.
 
-- [ ] **Step 9: Confirmar con el usuario si conservar o borrar el bundle**
+- [x] **Step 9: Confirmar con el usuario si conservar o borrar el bundle**
 
 No es un paso de código: al terminar el plan, preguntar a Rafa si `~/personal_schedule-legacy.bundle` se conserva o se borra. No lo borres tú mismo sin confirmación explícita.
 
@@ -119,7 +119,7 @@ No es un paso de código: al terminar el plan, preguntar a Rafa si `~/personal_s
 - Consumes: nada
 - Produces: documento de referencia que citarán todos los planes siguientes (`Spec:` en su cabecera).
 
-- [ ] **Step 1: Crear el directorio y el archivo de spec**
+- [x] **Step 1: Crear el directorio y el archivo de spec**
 
 Contenido completo de `docs/specs/2026-09-06-menu-familiar-design.md`:
 
@@ -225,7 +225,7 @@ parámetros, o sustituir Apps Script por Sheets API v4 + OAuth (con el coste
 de login recurrente en la tablet que se quería evitar).
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/specs/2026-09-06-menu-familiar-design.md
@@ -246,7 +246,7 @@ git commit -m "docs: spec de diseño del planificador de menú familiar"
 - Consumes: nada
 - Produces: proyecto `web/` con `npm run dev|build|lint|test` funcionando. Los siguientes planes añaden código dentro de `domain/`, `data/` y `features/` sin tocar la configuración.
 
-- [ ] **Step 1: Generar el proyecto base con Vite**
+- [x] **Step 1: Generar el proyecto base con Vite**
 
 ```bash
 cd /home/rafa/dev/personal/personal_schedule
@@ -255,7 +255,7 @@ cd web
 npm install
 ```
 
-- [ ] **Step 2: Instalar dependencias de la aplicación**
+- [x] **Step 2: Instalar dependencias de la aplicación**
 
 ```bash
 npm install @tanstack/react-query @tanstack/react-query-persist-client \
@@ -264,14 +264,14 @@ npm install @tanstack/react-query @tanstack/react-query-persist-client \
   react-hook-form @hookform/resolvers motion lucide-react clsx
 ```
 
-- [ ] **Step 3: Instalar dependencias de test y de desarrollo**
+- [x] **Step 3: Instalar dependencias de test y de desarrollo**
 
 ```bash
 npm install -D vitest jsdom @testing-library/react @testing-library/jest-dom \
   @testing-library/user-event vite-plugin-pwa msw prettier eslint-config-prettier
 ```
 
-- [ ] **Step 4: Instalar y configurar Tailwind CSS v4**
+- [x] **Step 4: Instalar y configurar Tailwind CSS v4**
 
 ```bash
 npm install tailwindcss @tailwindcss/vite
@@ -301,7 +301,7 @@ Editar `web/src/index.css` (reemplazar el archivo entero):
 @import 'tailwindcss';
 ```
 
-- [ ] **Step 5: Configurar el entorno de test**
+- [x] **Step 5: Configurar el entorno de test**
 
 Crear `web/src/test/setup.ts`:
 
@@ -309,7 +309,7 @@ Crear `web/src/test/setup.ts`:
 import '@testing-library/jest-dom/vitest'
 ```
 
-- [ ] **Step 6: Añadir scripts de test a `package.json`**
+- [x] **Step 6: Añadir scripts de test a `package.json`**
 
 En `web/package.json`, dentro de `"scripts"`, añadir (junto a los que ya trae el template: `dev`, `build`, `lint`, `preview`):
 
@@ -318,7 +318,7 @@ En `web/package.json`, dentro de `"scripts"`, añadir (junto a los que ya trae e
 "test:watch": "vitest"
 ```
 
-- [ ] **Step 7: Escribir el test de humo del pipeline**
+- [x] **Step 7: Escribir el test de humo del pipeline**
 
 Crear `web/src/App.test.tsx`:
 
@@ -341,12 +341,12 @@ describe('App scaffold', () => {
 })
 ```
 
-- [ ] **Step 8: Ejecutar el test y verificar que pasa**
+- [x] **Step 8: Ejecutar el test y verificar que pasa**
 
 Run: `npm run test`
 Expected: 1 archivo de test, 1 test, `PASS`.
 
-- [ ] **Step 9: Crear la estructura de carpetas de la arquitectura**
+- [x] **Step 9: Crear la estructura de carpetas de la arquitectura**
 
 ```bash
 mkdir -p src/domain src/data src/features/planner src/features/shopping src/features/catalog src/shared
@@ -355,7 +355,7 @@ touch src/domain/.gitkeep src/data/.gitkeep \
   src/shared/.gitkeep
 ```
 
-- [ ] **Step 10: Añadir Prettier**
+- [x] **Step 10: Añadir Prettier**
 
 Crear `web/.prettierrc`:
 
@@ -380,7 +380,7 @@ export default [
 ]
 ```
 
-- [ ] **Step 11: Verificar lint, test y build en verde**
+- [x] **Step 11: Verificar lint, test y build en verde**
 
 ```bash
 npm run lint
@@ -390,7 +390,7 @@ npm run build
 
 Expected: los tres comandos terminan sin error (exit code 0).
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 cd /home/rafa/dev/personal/personal_schedule
@@ -411,7 +411,7 @@ git commit -m "chore: scaffold de la web app (Vite + React + TS + Tailwind v4 + 
 - Consumes: nada
 - Produces: código listo para pegar manualmente en el editor de Apps Script (no hay API de despliegue automatizable sin login interactivo de Google, así que este paso es manual para Rafa).
 
-- [ ] **Step 1: Escribir el código del spike**
+- [x] **Step 1: Escribir el código del spike**
 
 Crear `apps-script/Codigo.gs`:
 
@@ -453,7 +453,7 @@ function doPost(e) {
 }
 ```
 
-- [ ] **Step 2: Escribir el manifiesto**
+- [x] **Step 2: Escribir el manifiesto**
 
 Crear `apps-script/appsscript.json`:
 
@@ -470,7 +470,7 @@ Crear `apps-script/appsscript.json`:
 }
 ```
 
-- [ ] **Step 3: Escribir la guía de despliegue manual**
+- [x] **Step 3: Escribir la guía de despliegue manual**
 
 Crear `apps-script/README.md`:
 
@@ -507,7 +507,7 @@ Nueva versión). Guardar el archivo en el editor no actualiza la URL ya
 publicada.
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps-script/
@@ -525,13 +525,13 @@ git commit -m "feat: spike de conectividad de Apps Script (GET/POST) y guía de 
 - Consumes: URL de despliegue del Web App (la aporta Rafa tras el Step 1)
 - Produces: decisión go/no-go documentada, que condiciona el diseño de la API en el siguiente plan.
 
-- [ ] **Step 1 (manual, Rafa): Desplegar y compartir la URL**
+- [x] **Step 1 (manual, Rafa): Desplegar y compartir la URL**
 
 Seguir `apps-script/README.md` y pegar en el chat la URL que termina en
 `/exec`. Este paso no lo puede automatizar el agente: requiere iniciar
 sesión y aceptar permisos en tu cuenta de Google.
 
-- [ ] **Step 2 (agente): Verificar `GET` desde un navegador real**
+- [x] **Step 2 (agente): Verificar `GET` desde un navegador real**
 
 Usar las herramientas de Chrome DevTools MCP: abrir una página nueva
 (`about:blank` sirve, no hace falta el dev server) y ejecutar con
@@ -551,7 +551,7 @@ async () => {
 Expected: `status: 200`, `json.ok === true`, sin error de red ni de CORS en
 la consola de la página (revisar con `list_console_messages`).
 
-- [ ] **Step 3 (agente): Verificar `POST` con `text/plain`**
+- [x] **Step 3 (agente): Verificar `POST` con `text/plain`**
 
 Mismo mecanismo, nuevo `evaluate_script`:
 
@@ -573,13 +573,13 @@ async () => {
 Expected: `status: 200`, `json.echoed` igual a `{hello: "world"}`, sin
 preflight fallido en la consola.
 
-- [ ] **Step 4 (agente): Medir arranque en frío**
+- [x] **Step 4 (agente): Medir arranque en frío**
 
 Esperar al menos 10 minutos sin llamar al script (o usar una segunda
 implementación) y repetir el Step 2, anotando `ms`. Comparar con una
 llamada inmediatamente posterior (script ya "caliente").
 
-- [ ] **Step 5: Registrar el resultado en la spec**
+- [x] **Step 5: Registrar el resultado en la spec**
 
 Añadir al final de `docs/specs/2026-09-06-menu-familiar-design.md`, bajo un
 nuevo encabezado `## Resultado del spike de conectividad`, los datos reales
