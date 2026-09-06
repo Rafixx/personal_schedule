@@ -148,3 +148,52 @@ Con esto queda despejado el único riesgo técnico de la arquitectura. El
 siguiente plan puede construir la API completa (todas las acciones de
 lectura/escritura descritas arriba) y la capa de datos del frontend sin
 más validaciones previas.
+
+## Resultado de la migración y verificación E2E de la API
+
+Verificado el 2026-09-06 contra la hoja real de Rafa, con la API completa
+de `apps-script/Codigo.gs` ya desplegada.
+
+**Migración de datos (`admin.migrate`)** — informe final tras corregir dos
+problemas encontrados durante la ejecución (ver más abajo):
+
+| Corrección | Cantidad |
+|---|---|
+| `activo` rellenado en platos | 9 |
+| Nombres/proveedores con erratas corregidos | 3 (`Moozzarela fresca`, `Huevoss`, `Garbanzzos`, `Arrroz basmati`) |
+| Cantidades normalizadas a numérico | 1 (`"1/2"` → `0.5`) |
+| Unidades `"unidad"` → `"ud"` | 5 |
+| Filas huérfanas de `ingredientes_platos` eliminadas | 15 |
+
+**Dos problemas reales encontrados y corregidos en el propio código**
+(no eran errores de despliegue, sino casos que el diseño original no
+contemplaba):
+
+1. **Validación de datos en `proveedor`.** La celda de "Mira al talll"
+   tiene una lista desplegable que solo admite ese valor exacto (con la
+   errata). Corregir el nombre a "Mira al tall" lo viola. Se dejó sin
+   corregir por código — pendiente de arreglo manual en Sheets (editar la
+   validación) si se quiere, fuera del alcance de este plan.
+2. **`"1/2"` interpretado como fecha.** Google Sheets convirtió el texto
+   `"1/2"` a una fecha (1 de febrero) en vez de mantenerlo como texto. La
+   migración ahora detecta también valores `Date` en `cantidad` y
+   reconstruye la fracción a partir del día/mes (`fraccionDesdeFecha_`),
+   fijando además el formato de esa celda a numérico para que no vuelva a
+   pasar con ese valor.
+
+**Verificación end-to-end de las 12 acciones**, todas `{ok:true}` con el
+resultado esperado:
+
+| Acción | Resultado |
+|---|---|
+| `bootstrap` | Esquema migrado visible (`etiquetas`, `activo`, cantidades numéricas) |
+| `plan.set` / `plan.move` / `plan.delete` | Intercambio de dos días confirmado vía `plan` tras el `move`; ambos `delete` limpiaron las filas |
+| `plato.upsert` (alta y edición) / `plato.delete` | Alta con id nuevo (10), edición reflejada, borrado lógico (`activo:false`) confirmado en `bootstrap` |
+| `ingrediente.upsert` / `ingrediente.delete` | Alta con id nuevo (16), borrado confirmado |
+| `regla.upsert` / `regla.delete` | Alta con id 1 (primera regla), borrado confirmado |
+| `platoIngredientes.replace` | Reemplazo probado sobre el Gazpacho (id_plato 1) y restaurado a sus 4 ingredientes originales en la misma sesión de pruebas |
+
+**Conclusión: API completa confirmada y datos migrados.** El siguiente
+plan puede construir el dominio puro (temporadas, reglas, cálculo de la
+compra) y la capa de datos del frontend (zod, mappers, cliente HTTP, hooks
+de TanStack Query) contra este contrato sin más cambios en Apps Script.
