@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Catalogo, PlanEntry, Turno } from '../domain/types'
+import type { Catalogo, Orden, PlanEntry, Turno } from '../domain/types'
 import { sheetsClient } from './client'
 import type { FilaInvalida } from './schemas'
 import {
@@ -84,6 +84,7 @@ export function usePlan(desde: string, hasta: string) {
 interface NuevaAsignacion {
   fecha: string
   turno: Turno
+  orden: Orden
   idPlato: number
   notas?: string
 }
@@ -95,6 +96,7 @@ export function useSetPlanEntry() {
       sheetsClient.apiPost('plan.set', {
         fecha: entrada.fecha,
         turno: entrada.turno,
+        orden: entrada.orden,
         id_plato: entrada.idPlato,
         notas: entrada.notas ?? ''
       }),
@@ -105,6 +107,7 @@ export function useSetPlanEntry() {
 interface ExtremoPlan {
   fecha: string
   turno: Turno
+  orden: Orden
 }
 
 export function useMovePlanEntry() {

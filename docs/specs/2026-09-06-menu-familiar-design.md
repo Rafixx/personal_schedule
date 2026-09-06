@@ -210,7 +210,9 @@ de TanStack Query) contra este contrato sin más cambios en Apps Script.
 - `types.ts` — `Plato`, `Ingrediente`, `IngredientePlato`, `PlanEntry`, `Regla`, `Proveedor`, `Catalogo`.
 - `temporadas.ts` — `temporadaDe(fechaIso)`, `estaEnTemporada(temporadas, fechaIso)`.
 - `reglas.ts` — `evaluarSemana(asignaciones, reglas)` → `EstadoRegla[]`. Cubre `MAX_SEMANA`,
-  `MIN_SEMANA` y `NO_CONSECUTIVO` (con distancia real en días, no solo orden en el array).
+  `MIN_SEMANA` y `NO_CONSECUTIVO`. Cada día puede tener hasta dos huecos (`orden` 1/2);
+  `NO_CONSECUTIVO` se incumple tanto entre días calendario seguidos como entre el
+  primero y el segundo del mismo día (distancia en días `<= 1`).
 - `compra.ts` — `calcularCompra(plan, catalogo)` → `ListaCompra[]` agrupada por proveedor. El
   caller filtra `plan` al rango de fechas antes de llamar.
 
@@ -226,9 +228,9 @@ de TanStack Query) contra este contrato sin más cambios en Apps Script.
 
 Pendiente para el plan del planificador: montar `QueryClientProvider` (con
 `persistQueryClient` + `idb-keyval` para offline) en `main.tsx`, y las mutaciones de
-`plato`/`ingrediente`/`regla` para la página de catálogo. Pendiente además tras el
-segundo hueco por comida (ver abajo): `PlanEntry` y `evaluarSemana` en `domain/`, y
-`planEntryRowSchema`/`mapPlanEntry`/`queries.ts` en `data/`, aún no incluyen `orden`.
+`plato`/`ingrediente`/`regla` para la página de catálogo. `orden` ya está soportado de
+punta a punta (API, dominio, esquemas, mappers, hooks) — la UI del planificador puede
+construirse directamente sobre `useSetPlanEntry`/`useMovePlanEntry`/`useDeletePlanEntry`.
 
 ## Resultado de la verificación del segundo hueco (orden)
 

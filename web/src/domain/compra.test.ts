@@ -26,7 +26,7 @@ const catalogo: Catalogo = {
 }
 
 function entrada(fecha: string, idPlato: number): PlanEntry {
-  return { id: 1, fecha, turno: 'COMIDA', idPlato, notas: '' }
+  return { id: 1, fecha, turno: 'COMIDA', orden: 1, idPlato, notas: '' }
 }
 
 describe('calcularCompra', () => {

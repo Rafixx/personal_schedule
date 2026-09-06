@@ -45,12 +45,12 @@ describe('useSetPlanEntry', () => {
       http.post(API_URL, async ({ request }) => {
         const body = (await request.json()) as { action: string; payload: unknown }
         expect(body.action).toBe('plan.set')
-        expect(body.payload).toEqual({ fecha: '2026-09-07', turno: 'COMIDA', id_plato: 1, notas: '' })
+        expect(body.payload).toEqual({ fecha: '2026-09-07', turno: 'COMIDA', orden: 1, id_plato: 1, notas: '' })
         return HttpResponse.json({ ok: true, result: { id: 1 } })
       })
     )
     const { result } = renderHook(() => useSetPlanEntry(), { wrapper })
-    result.current.mutate({ fecha: '2026-09-07', turno: 'COMIDA', idPlato: 1 })
+    result.current.mutate({ fecha: '2026-09-07', turno: 'COMIDA', orden: 1, idPlato: 1 })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 })
