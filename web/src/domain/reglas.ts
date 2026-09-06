@@ -1,7 +1,8 @@
-import type { Plato, Regla } from './types'
+import type { Orden, Plato, Regla } from './types'
 
 export interface AsignacionSemana {
   fecha: string
+  orden: Orden
   plato: Plato | null
 }
 
@@ -27,13 +28,20 @@ function diasEntre(fechaA: string, fechaB: string): number {
   return Math.round((b - a) / 86400000)
 }
 
+// Dos asignaciones se consideran "seguidas" si están en el mismo día
+// (distinto hueco, distancia 0) o en días calendario consecutivos
+// (distancia 1) — así una regla NO_CONSECUTIVO detecta tanto carne dos
+// días seguidos como carne de primero y segundo el mismo día.
 function hayConsecutivos(asignaciones: AsignacionSemana[], etiqueta: string): boolean {
-  const ordenadas = [...asignaciones].sort((a, b) => a.fecha.localeCompare(b.fecha))
+  const ordenadas = [...asignaciones].sort((a, b) => {
+    const porFecha = a.fecha.localeCompare(b.fecha)
+    return porFecha !== 0 ? porFecha : a.orden - b.orden
+  })
   for (let i = 1; i < ordenadas.length; i++) {
     const anterior = ordenadas[i - 1]
     const actual = ordenadas[i]
-    const sonDiaSiguiente = diasEntre(anterior.fecha, actual.fecha) === 1
-    if (sonDiaSiguiente && tienEtiqueta(anterior, etiqueta) && tienEtiqueta(actual, etiqueta)) {
+    const distancia = diasEntre(anterior.fecha, actual.fecha)
+    if (distancia <= 1 && tienEtiqueta(anterior, etiqueta) && tienEtiqueta(actual, etiqueta)) {
       return true
     }
   }

@@ -31,10 +31,13 @@ export interface IngredientePlato {
 
 export type Turno = 'COMIDA'
 
+export type Orden = 1 | 2
+
 export interface PlanEntry {
   id: number
   fecha: string
   turno: Turno
+  orden: Orden
   idPlato: number
   notas: string
 }
