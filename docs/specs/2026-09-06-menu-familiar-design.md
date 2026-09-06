@@ -49,25 +49,50 @@ Limpieza de datos pendiente sobre la hoja actual: `Moozzarela`→`Mozzarella`,
 
 ## API (Google Apps Script)
 
-Un único script (`apps-script/Codigo.gs`) con enrutado por parámetro `action`.
-Respuestas siempre `ContentService.createTextOutput(JSON.stringify(...)).setMimeType(JSON)`.
+Implementada en `apps-script/Codigo.gs`. Un helper genérico
+(`sheetToObjects_`) mapea cualquier pestaña a objetos usando sus cabeceras
+reales — las lecturas no dependen de que la migración ya se haya
+ejecutado. `ensureSchema_()` corre en cada request y normaliza cabeceras y
+formato de la columna `fecha` de forma idempotente.
 
-**Lectura (`doGet`)**
-- `bootstrap` → `{platos, ingredientes, ingredientesPlatos, reglas, proveedores}` en una sola llamada.
-- `plan&desde=YYYY-MM-DD&hasta=YYYY-MM-DD`
+**Lectura (`GET`, sin token)**
+- `?action=bootstrap` → `{ok:true, platos, ingredientes, ingredientesPlatos, reglas, proveedores}`
+- `?action=plan&desde=YYYY-MM-DD&hasta=YYYY-MM-DD` → `{ok:true, entries}`
 
-**Escritura (`doPost`, body `{action, token, payload}`, `Content-Type: text/plain`)**
-- `plan.set` (upsert por `fecha`+`turno`), `plan.delete`, `plan.move`
-- `plato.upsert`, `plato.delete` (borrado lógico vía `activo`)
-- `ingrediente.upsert`, `ingrediente.delete`
-- `platoIngredientes.replace`
-- `regla.upsert`, `regla.delete`
+Cada objeto incluye un campo interno `_row` que el frontend debe ignorar.
+
+**Escritura (`POST`, body `{action, token, payload}`, `Content-Type: text/plain`)**
+
+| action | payload | result |
+|---|---|---|
+| `plan.set` | `{fecha, turno, id_plato, notas?}` | `{id}` |
+| `plan.delete` | `{fecha, turno}` | `{deleted}` |
+| `plan.move` | `{from:{fecha,turno}, to:{fecha,turno}}` | `{ok:true}` |
+| `plato.upsert` | `{id_plato?, nombre, temporada, etiquetas, notas?, activo?}` | `{id_plato}` |
+| `plato.delete` | `{id_plato}` | `{deleted}` |
+| `ingrediente.upsert` | `{id_ingrediente?, nombre, proveedor?, unidad_base?, temporada?, kcal_100?, prot_100?, carb_100?, grasa_100?}` | `{id_ingrediente}` |
+| `ingrediente.delete` | `{id_ingrediente}` | `{deleted}` |
+| `platoIngredientes.replace` | `{id_plato, ingredientes:[{id_ingrediente,cantidad,unidad}]}` | `{id_plato, count}` |
+| `regla.upsert` | `{id?, etiqueta, tipo, valor, activa?}` | `{id}` |
+| `regla.delete` | `{id}` | `{deleted}` |
+| `admin.migrate` | `{}` | `{activoBackfilled, nombresCorregidos, cantidadesNormalizadas, unidadesNormalizadas, filasIngredientesPlatosEliminadas}` |
+
+Respuesta de error (cualquier acción): `{ok:false, error:"..."}`.
 
 Reglas de implementación: todas las escrituras bajo `LockService.getScriptLock()`;
 ids asignados por el servidor (`max(id)+1` bajo lock); token compartido
 comparado contra `PropertiesService`; **POST siempre `text/plain`** — un
 `Content-Type: application/json` dispara un preflight `OPTIONS` que Apps
 Script no responde y el navegador bloquea la petición.
+
+Nota de contrato: `plato.upsert` asume `activo:true` si se omite. El
+cliente debe enviar siempre `activo` explícito al editar un plato
+existente, o reactivará por accidente uno borrado.
+
+`admin.migrate` es una acción de mantenimiento idempotente (backfill de
+`activo`, corrección de nombres con erratas, `cantidad` de texto tipo
+`"1/2"` a numérico, normalización de `unidad`, borrado de filas huérfanas
+de `ingredientes_platos`). Se puede volver a llamar sin riesgo.
 
 ## Arquitectura del frontend
 
