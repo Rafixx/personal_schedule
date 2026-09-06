@@ -1,0 +1,109 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Catalogo, PlanEntry, Turno } from '../domain/types'
+import { sheetsClient } from './client'
+import {
+  bootstrapEnvelopeSchema,
+  ingredientePlatoRowSchema,
+  ingredienteRowSchema,
+  parseRows,
+  planEnvelopeSchema,
+  planEntryRowSchema,
+  platoRowSchema,
+  proveedorRowSchema,
+  reglaRowSchema
+} from './schemas'
+import {
+  mapIngrediente,
+  mapIngredientePlato,
+  mapPlanEntry,
+  mapPlato,
+  mapProveedor,
+  mapRegla
+} from './mappers'
+
+export interface CatalogoConAvisos {
+  catalogo: Catalogo
+  filasInvalidas: number
+}
+
+async function fetchCatalogo(): Promise<CatalogoConAvisos> {
+  const raw = await sheetsClient.apiGet('bootstrap')
+  const envelope = bootstrapEnvelopeSchema.parse(raw)
+  const platos = parseRows(platoRowSchema, envelope.platos)
+  const ingredientes = parseRows(ingredienteRowSchema, envelope.ingredientes)
+  const ingredientesPlatos = parseRows(ingredientePlatoRowSchema, envelope.ingredientesPlatos)
+  const reglas = parseRows(reglaRowSchema, envelope.reglas)
+  const proveedores = parseRows(proveedorRowSchema, envelope.proveedores)
+  return {
+    catalogo: {
+      platos: platos.valid.map(mapPlato),
+      ingredientes: ingredientes.valid.map(mapIngrediente),
+      ingredientesPlatos: ingredientesPlatos.valid.map(mapIngredientePlato),
+      reglas: reglas.valid.map(mapRegla),
+      proveedores: proveedores.valid.map(mapProveedor)
+    },
+    filasInvalidas:
+      platos.invalid.length +
+      ingredientes.invalid.length +
+      ingredientesPlatos.invalid.length +
+      reglas.invalid.length +
+      proveedores.invalid.length
+  }
+}
+
+export function useCatalogo() {
+  return useQuery({ queryKey: ['catalogo'], queryFn: fetchCatalogo })
+}
+
+async function fetchPlan(desde: string, hasta: string): Promise<PlanEntry[]> {
+  const raw = await sheetsClient.apiGet('plan', { desde, hasta })
+  const envelope = planEnvelopeSchema.parse(raw)
+  const { valid } = parseRows(planEntryRowSchema, envelope.entries)
+  return valid.map(mapPlanEntry)
+}
+
+export function usePlan(desde: string, hasta: string) {
+  return useQuery({ queryKey: ['plan', desde, hasta], queryFn: () => fetchPlan(desde, hasta) })
+}
+
+interface NuevaAsignacion {
+  fecha: string
+  turno: Turno
+  idPlato: number
+  notas?: string
+}
+
+export function useSetPlanEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (entrada: NuevaAsignacion) =>
+      sheetsClient.apiPost('plan.set', {
+        fecha: entrada.fecha,
+        turno: entrada.turno,
+        id_plato: entrada.idPlato,
+        notas: entrada.notas ?? ''
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
+  })
+}
+
+interface ExtremoPlan {
+  fecha: string
+  turno: Turno
+}
+
+export function useMovePlanEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (args: { from: ExtremoPlan; to: ExtremoPlan }) => sheetsClient.apiPost('plan.move', args),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
+  })
+}
+
+export function useDeletePlanEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (args: ExtremoPlan) => sheetsClient.apiPost('plan.delete', args),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
+  })
+}
