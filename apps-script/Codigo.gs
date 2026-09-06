@@ -21,7 +21,7 @@ var SCHEMA = {
     'kcal_100', 'prot_100', 'carb_100', 'grasa_100'
   ],
   ingredientes_platos: ['id', 'id_plato', 'id_ingrediente', 'cantidad', 'unidad'],
-  plan: ['id', 'fecha', 'turno', 'id_plato', 'notas'],
+  plan: ['id', 'fecha', 'turno', 'orden', 'id_plato', 'notas'],
   reglas: ['id', 'etiqueta', 'tipo', 'valor', 'activa'],
   proveedores: ['nombre', 'orden']
 }
@@ -201,22 +201,24 @@ function routeAction_(action, payload) {
 
 function planSet_(payload) {
   var existing = findRow_(SHEET_NAMES.PLAN, function (row) {
-    return normalizeFecha_(row.fecha) === payload.fecha && row.turno === payload.turno
+    return normalizeFecha_(row.fecha) === payload.fecha && row.turno === payload.turno &&
+      String(row.orden) === String(payload.orden)
   })
   var notas = payload.notas || ''
   if (existing) {
     writeRow_(SHEET_NAMES.PLAN, SCHEMA.plan, existing._row,
-      [existing.id, payload.fecha, payload.turno, payload.id_plato, notas])
+      [existing.id, payload.fecha, payload.turno, payload.orden, payload.id_plato, notas])
     return { id: existing.id }
   }
   var id = nextId_(SHEET_NAMES.PLAN, 'id')
-  appendRow_(SHEET_NAMES.PLAN, [id, payload.fecha, payload.turno, payload.id_plato, notas])
+  appendRow_(SHEET_NAMES.PLAN, [id, payload.fecha, payload.turno, payload.orden, payload.id_plato, notas])
   return { id: id }
 }
 
 function planDelete_(payload) {
   var existing = findRow_(SHEET_NAMES.PLAN, function (row) {
-    return normalizeFecha_(row.fecha) === payload.fecha && row.turno === payload.turno
+    return normalizeFecha_(row.fecha) === payload.fecha && row.turno === payload.turno &&
+      String(row.orden) === String(payload.orden)
   })
   if (existing) deleteRow_(SHEET_NAMES.PLAN, existing._row)
   return { deleted: !!existing }
@@ -226,15 +228,23 @@ function planMove_(payload) {
   var from = payload.from
   var to = payload.to
   var fromEntry = findRow_(SHEET_NAMES.PLAN, function (row) {
-    return normalizeFecha_(row.fecha) === from.fecha && row.turno === from.turno
+    return normalizeFecha_(row.fecha) === from.fecha && row.turno === from.turno &&
+      String(row.orden) === String(from.orden)
   })
   var toEntry = findRow_(SHEET_NAMES.PLAN, function (row) {
-    return normalizeFecha_(row.fecha) === to.fecha && row.turno === to.turno
+    return normalizeFecha_(row.fecha) === to.fecha && row.turno === to.turno &&
+      String(row.orden) === String(to.orden)
   })
-  if (fromEntry) planSet_({ fecha: to.fecha, turno: to.turno, id_plato: fromEntry.id_plato, notas: fromEntry.notas })
-  else planDelete_(to)
-  if (toEntry) planSet_({ fecha: from.fecha, turno: from.turno, id_plato: toEntry.id_plato, notas: toEntry.notas })
-  else planDelete_(from)
+  if (fromEntry) {
+    planSet_({ fecha: to.fecha, turno: to.turno, orden: to.orden, id_plato: fromEntry.id_plato, notas: fromEntry.notas })
+  } else {
+    planDelete_(to)
+  }
+  if (toEntry) {
+    planSet_({ fecha: from.fecha, turno: from.turno, orden: from.orden, id_plato: toEntry.id_plato, notas: toEntry.notas })
+  } else {
+    planDelete_(from)
+  }
   return { ok: true }
 }
 
