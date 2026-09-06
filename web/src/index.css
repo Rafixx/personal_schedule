@@ -1,1 +1,23 @@
 @import 'tailwindcss';
+
+:root {
+  --tag-color-0: #eda100;
+  --tag-color-1: #eb6834;
+  --tag-color-2: #1baf7a;
+  --tag-color-3: #008300;
+  --tag-color-4: #2a78d6;
+  --tag-color-5: #4a3aa7;
+  --tag-color-6: #e87ba4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tag-color-0: #c98500;
+    --tag-color-1: #d95926;
+    --tag-color-2: #199e70;
+    --tag-color-3: #3fae3f;
+    --tag-color-4: #3987e5;
+    --tag-color-5: #9085e9;
+    --tag-color-6: #d55181;
+  }
+}
