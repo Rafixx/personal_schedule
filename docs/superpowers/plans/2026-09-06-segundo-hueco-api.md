@@ -33,7 +33,7 @@
   - `POST plan.delete` → payload `{fecha, turno, orden}` → `{deleted}`
   - `POST plan.move` → payload `{from:{fecha,turno,orden}, to:{fecha,turno,orden}}` → `{ok:true}`
 
-- [ ] **Step 1: Actualizar `SCHEMA.plan`**
+- [x] **Step 1: Actualizar `SCHEMA.plan`**
 
 En `apps-script/Codigo.gs`, dentro del objeto `SCHEMA`, cambiar:
 
@@ -47,7 +47,7 @@ por:
   plan: ['id', 'fecha', 'turno', 'orden', 'id_plato', 'notas'],
 ```
 
-- [ ] **Step 2: Actualizar `planSet_`**
+- [x] **Step 2: Actualizar `planSet_`**
 
 Reemplazar la función completa por:
 
@@ -69,7 +69,7 @@ function planSet_(payload) {
 }
 ```
 
-- [ ] **Step 3: Actualizar `planDelete_`**
+- [x] **Step 3: Actualizar `planDelete_`**
 
 Reemplazar la función completa por:
 
@@ -84,7 +84,7 @@ function planDelete_(payload) {
 }
 ```
 
-- [ ] **Step 4: Actualizar `planMove_`**
+- [x] **Step 4: Actualizar `planMove_`**
 
 Reemplazar la función completa por:
 
@@ -114,7 +114,7 @@ function planMove_(payload) {
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps-script/Codigo.gs
@@ -128,7 +128,7 @@ git commit -m "feat: soportar dos huecos por comida (orden) en la API de plan"
 **Files:**
 - Modify: `docs/specs/2026-09-06-menu-familiar-design.md`
 
-- [ ] **Step 1: Actualizar la fila de `plan` en la tabla de esquema de la hoja**
+- [x] **Step 1: Actualizar la fila de `plan` en la tabla de esquema de la hoja**
 
 Cambiar:
 
@@ -142,7 +142,7 @@ por:
 | `plan` | `id, fecha, turno, orden, id_plato, notas` |
 ```
 
-- [ ] **Step 2: Actualizar la tabla de acciones de la API**
+- [x] **Step 2: Actualizar la tabla de acciones de la API**
 
 Cambiar las tres filas de `plan.*` en la tabla de acciones por:
 
@@ -152,7 +152,7 @@ Cambiar las tres filas de `plan.*` en la tabla de acciones por:
 | `plan.move` | `{from:{fecha,turno,orden}, to:{fecha,turno,orden}}` | `{ok:true}` |
 ```
 
-- [ ] **Step 3: Añadir la nota de decisión**
+- [x] **Step 3: Añadir la nota de decisión**
 
 Añadir bajo la tabla de acciones:
 
@@ -164,7 +164,7 @@ mismo `fecha` en `from` y `to` pero distinto `orden` intercambia primero y
 segundo del mismo día, usando el mismo mecanismo que mover entre días.
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/specs/2026-09-06-menu-familiar-design.md
@@ -183,14 +183,14 @@ git commit -m "docs: dos huecos por comida (orden) en el contrato de la API"
 (`https://script.google.com/macros/s/AKfycbwXp4Vmb3gWxT14nTZwdHhNHQOOBPCACjHrOFTREi4GkxZRnbvjJmdFViaGZ0uOnHyI/exec`)
 y el token ya conocido
 
-- [ ] **Step 1 (manual, Rafa): Pegar el archivo completo actualizado y redesplegar**
+- [x] **Step 1 (manual, Rafa): Pegar el archivo completo actualizado y redesplegar**
 
 1. Abre el editor de Apps Script, sustituye todo el contenido de `Código.gs` por el contenido íntegro y actual de `apps-script/Codigo.gs` (te lo paso completo en el chat en su momento).
 2. Guarda (Ctrl+S).
 3. Implementar → Gestionar implementaciones → lápiz → Nueva versión → Implementar (misma URL).
 4. Confirma "listo" en el chat.
 
-- [ ] **Step 2 (agente): Verificar que `bootstrap` sigue intacto**
+- [x] **Step 2 (agente): Verificar que `bootstrap` sigue intacto**
 
 ```javascript
 async () => {
@@ -204,7 +204,7 @@ async () => {
 Expected: `{ok:true, nPlatos:9, nIngredientes:15}` (u otros números si Rafa ya
 editó la hoja manualmente entre medias, pero `ok:true` sin excepción).
 
-- [ ] **Step 3 (agente): `plan.set` de primero y segundo el mismo día, y lectura**
+- [x] **Step 3 (agente): `plan.set` de primero y segundo el mismo día, y lectura**
 
 ```javascript
 async () => {
@@ -229,7 +229,7 @@ Expected: `primero.result.id` y `segundo.result.id` son ids distintos;
 `orden:1, id_plato:2` y otra con `orden:2, id_plato:3` — confirma que no se
 pisan entre sí.
 
-- [ ] **Step 4 (agente): `plan.move` intercambiando primero y segundo del mismo día**
+- [x] **Step 4 (agente): `plan.move` intercambiando primero y segundo del mismo día**
 
 ```javascript
 async () => {
@@ -254,7 +254,7 @@ Expected: `movido` → `{ok:true, result:{ok:true}}`; en `leido.entries`, el
 `orden:1` ahora tiene `id_plato:3` y el `orden:2` tiene `id_plato:2`
 (intercambiados).
 
-- [ ] **Step 5 (agente): `plan.delete` de un solo hueco y limpieza final**
+- [x] **Step 5 (agente): `plan.delete` de un solo hueco y limpieza final**
 
 ```javascript
 async () => {
@@ -280,7 +280,7 @@ Expected: `del1` → `{deleted:true}`; `leidoTras1.entries` tiene **1 fila**
 `leidoFinal.entries` está **vacío** — la hoja `plan` queda limpia, sin
 residuos de la verificación.
 
-- [ ] **Step 6: Registrar el resultado en la spec**
+- [x] **Step 6: Registrar el resultado en la spec**
 
 Añadir al final de `docs/specs/2026-09-06-menu-familiar-design.md`, bajo
 `## Resultado de la verificación del segundo hueco (orden)`, confirmación
