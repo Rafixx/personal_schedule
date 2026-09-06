@@ -45,6 +45,32 @@ describe('platoRowSchema', () => {
     })
     expect(resultado.success).toBe(false)
   })
+
+  it('acepta notas como número (Sheets puede devolver tipos no-string) y lo convierte a texto', () => {
+    const resultado = platoRowSchema.safeParse({
+      id_plato: 1,
+      nombre: 'Test',
+      temporada: 'TODAS',
+      etiquetas: '',
+      notas: 4,
+      activo: true
+    })
+    expect(resultado.success).toBe(true)
+    expect(resultado.success && resultado.data.notas).toBe('4')
+  })
+
+  it('acepta nombre como número y lo convierte a texto no vacío', () => {
+    const resultado = platoRowSchema.safeParse({
+      id_plato: 1,
+      nombre: 123,
+      temporada: 'TODAS',
+      etiquetas: '',
+      notas: '',
+      activo: true
+    })
+    expect(resultado.success).toBe(true)
+    expect(resultado.success && resultado.data.nombre).toBe('123')
+  })
 })
 
 describe('ingredienteRowSchema', () => {

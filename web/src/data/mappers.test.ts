@@ -32,6 +32,18 @@ describe('mapPlato', () => {
     })
     expect(resultado.etiquetas).toEqual([])
   })
+
+  it('normaliza temporadas en minúscula y descarta valores inválidos sin romper las válidas', () => {
+    const resultado = mapPlato({
+      id_plato: 1,
+      nombre: 'Ensalada',
+      temporada: 'verano,NOEXISTE',
+      etiquetas: '',
+      notas: '',
+      activo: true
+    })
+    expect(resultado.temporadas).toEqual(['VERANO'])
+  })
 })
 
 describe('mapIngrediente', () => {

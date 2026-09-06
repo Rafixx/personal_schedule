@@ -14,21 +14,27 @@ const numeroOpcional = z.preprocess((valor) => {
   return valor
 }, z.coerce.number().optional())
 
+const textoFlexible = z.preprocess((valor) => {
+  if (valor === null || valor === undefined) return ''
+  if (typeof valor === 'string') return valor
+  return String(valor)
+}, z.string())
+
 export const platoRowSchema = z.object({
   id_plato: z.coerce.number().int(),
-  nombre: z.string().min(1),
-  temporada: z.string(),
-  etiquetas: z.string().default(''),
-  notas: z.string().default(''),
+  nombre: textoFlexible.pipe(z.string().min(1)),
+  temporada: textoFlexible,
+  etiquetas: textoFlexible,
+  notas: textoFlexible,
   activo: booleanFlexible
 })
 
 export const ingredienteRowSchema = z.object({
   id_ingrediente: z.coerce.number().int(),
-  nombre: z.string().min(1),
-  proveedor: z.string().default(''),
-  unidad_base: z.string().default(''),
-  temporada: z.string().default(''),
+  nombre: textoFlexible.pipe(z.string().min(1)),
+  proveedor: textoFlexible,
+  unidad_base: textoFlexible,
+  temporada: textoFlexible,
   kcal_100: numeroOpcional,
   prot_100: numeroOpcional,
   carb_100: numeroOpcional,
@@ -40,27 +46,27 @@ export const ingredientePlatoRowSchema = z.object({
   id_plato: z.coerce.number().int(),
   id_ingrediente: z.coerce.number().int(),
   cantidad: z.coerce.number().positive(),
-  unidad: z.string().min(1)
+  unidad: textoFlexible.pipe(z.string().min(1))
 })
 
 export const planEntryRowSchema = z.object({
   id: z.coerce.number().int(),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  turno: z.string().min(1),
+  turno: textoFlexible.pipe(z.string().min(1)),
   id_plato: z.coerce.number().int(),
-  notas: z.string().default('')
+  notas: textoFlexible
 })
 
 export const reglaRowSchema = z.object({
   id: z.coerce.number().int(),
-  etiqueta: z.string().min(1),
+  etiqueta: textoFlexible.pipe(z.string().min(1)),
   tipo: z.enum(['MAX_SEMANA', 'MIN_SEMANA', 'NO_CONSECUTIVO']),
   valor: z.coerce.number(),
   activa: booleanFlexible
 })
 
 export const proveedorRowSchema = z.object({
-  nombre: z.string().min(1),
+  nombre: textoFlexible.pipe(z.string().min(1)),
   orden: z.coerce.number()
 })
 

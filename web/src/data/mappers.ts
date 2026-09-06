@@ -24,11 +24,19 @@ function parseLista(valor: string): string[] {
     .filter((v) => v.length > 0)
 }
 
+const TEMPORADAS_VALIDAS = new Set<Temporada>(['TODAS', 'PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO'])
+
+function parseTemporadas(valor: string): Temporada[] {
+  return parseLista(valor)
+    .map((t) => t.toUpperCase())
+    .filter((t): t is Temporada => TEMPORADAS_VALIDAS.has(t as Temporada))
+}
+
 export function mapPlato(row: z.infer<typeof platoRowSchema>): Plato {
   return {
     id: row.id_plato,
     nombre: row.nombre,
-    temporadas: parseLista(row.temporada) as Temporada[],
+    temporadas: parseTemporadas(row.temporada),
     etiquetas: parseLista(row.etiquetas),
     notas: row.notas,
     activo: row.activo
@@ -41,7 +49,7 @@ export function mapIngrediente(row: z.infer<typeof ingredienteRowSchema>): Ingre
     nombre: row.nombre,
     proveedor: row.proveedor,
     unidadBase: row.unidad_base,
-    temporadas: parseLista(row.temporada) as Temporada[],
+    temporadas: parseTemporadas(row.temporada),
     kcal100: row.kcal_100,
     prot100: row.prot_100,
     carb100: row.carb_100,

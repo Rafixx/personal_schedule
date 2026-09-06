@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Catalogo, PlanEntry, Turno } from '../domain/types'
 import { sheetsClient } from './client'
+import type { FilaInvalida } from './schemas'
 import {
   bootstrapEnvelopeSchema,
   ingredientePlatoRowSchema,
@@ -24,6 +25,13 @@ import {
 export interface CatalogoConAvisos {
   catalogo: Catalogo
   filasInvalidas: number
+  erroresPorColeccion: {
+    platos: FilaInvalida[]
+    ingredientes: FilaInvalida[]
+    ingredientesPlatos: FilaInvalida[]
+    reglas: FilaInvalida[]
+    proveedores: FilaInvalida[]
+  }
 }
 
 async function fetchCatalogo(): Promise<CatalogoConAvisos> {
@@ -47,7 +55,14 @@ async function fetchCatalogo(): Promise<CatalogoConAvisos> {
       ingredientes.invalid.length +
       ingredientesPlatos.invalid.length +
       reglas.invalid.length +
-      proveedores.invalid.length
+      proveedores.invalid.length,
+    erroresPorColeccion: {
+      platos: platos.invalid,
+      ingredientes: ingredientes.invalid,
+      ingredientesPlatos: ingredientesPlatos.invalid,
+      reglas: reglas.invalid,
+      proveedores: proveedores.invalid
+    }
   }
 }
 

@@ -35,6 +35,7 @@ describe('useCatalogo', () => {
     expect(result.current.data?.catalogo.platos).toHaveLength(1)
     expect(result.current.data?.catalogo.platos[0].nombre).toBe('Gazpacho')
     expect(result.current.data?.filasInvalidas).toBe(1)
+    expect(result.current.data?.erroresPorColeccion.platos).toHaveLength(1)
   })
 })
 
