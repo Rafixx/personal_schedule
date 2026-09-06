@@ -9,6 +9,7 @@ web/dist/
 .env
 .env.local
 apps-script/.clasp.json
+apps-script/API_TOKEN.txt
 
 # editor / SO
 .DS_Store
