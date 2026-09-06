@@ -31,6 +31,7 @@ export interface IngredientePlato {
 
 export type Turno = 'COMIDA'
 
+// Hueco de la comida: 1 = primero, 2 = segundo (no confundir con Proveedor.orden)
 export type Orden = 1 | 2
 
 export interface PlanEntry {

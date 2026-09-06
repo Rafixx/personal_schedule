@@ -31,19 +31,20 @@ function diasEntre(fechaA: string, fechaB: string): number {
 // Dos asignaciones se consideran "seguidas" si están en el mismo día
 // (distinto hueco, distancia 0) o en días calendario consecutivos
 // (distancia 1) — así una regla NO_CONSECUTIVO detecta tanto carne dos
-// días seguidos como carne de primero y segundo el mismo día.
+// días seguidos como carne de primero y segundo el mismo día. Se filtra
+// por etiqueta ANTES de ordenar: comparar solo adyacentes en la lista
+// completa dejaría pasar casos donde el hueco intermedio (vacío o con
+// otra etiqueta) separa en el array dos asignaciones con la misma
+// etiqueta que sí están en días consecutivos.
 function hayConsecutivos(asignaciones: AsignacionSemana[], etiqueta: string): boolean {
-  const ordenadas = [...asignaciones].sort((a, b) => {
-    const porFecha = a.fecha.localeCompare(b.fecha)
-    return porFecha !== 0 ? porFecha : a.orden - b.orden
-  })
+  const ordenadas = asignaciones
+    .filter((a) => tienEtiqueta(a, etiqueta))
+    .sort((a, b) => {
+      const porFecha = a.fecha.localeCompare(b.fecha)
+      return porFecha !== 0 ? porFecha : a.orden - b.orden
+    })
   for (let i = 1; i < ordenadas.length; i++) {
-    const anterior = ordenadas[i - 1]
-    const actual = ordenadas[i]
-    const distancia = diasEntre(anterior.fecha, actual.fecha)
-    if (distancia <= 1 && tienEtiqueta(anterior, etiqueta) && tienEtiqueta(actual, etiqueta)) {
-      return true
-    }
+    if (diasEntre(ordenadas[i - 1].fecha, ordenadas[i].fecha) <= 1) return true
   }
   return false
 }

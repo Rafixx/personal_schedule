@@ -72,6 +72,19 @@ describe('evaluarSemana', () => {
     expect(estado.estado).toBe('ok')
   })
 
+  it('NO_CONSECUTIVO en aviso cuando el hueco intermedio (segundo) está vacío o con otra etiqueta', () => {
+    const asignaciones: AsignacionSemana[] = [
+      { fecha: '2026-09-07', orden: 1, plato: plato('Hamburguesa', ['carne']) },
+      { fecha: '2026-09-07', orden: 2, plato: null },
+      { fecha: '2026-09-08', orden: 1, plato: plato('Pollo', ['carne']) },
+      { fecha: '2026-09-08', orden: 2, plato: plato('Ensalada', ['verdura']) }
+    ]
+    const [estado] = evaluarSemana(asignaciones, [
+      regla({ etiqueta: 'carne', tipo: 'NO_CONSECUTIVO', valor: 0 })
+    ])
+    expect(estado.estado).toBe('aviso')
+  })
+
   it('ignora reglas inactivas', () => {
     const asignaciones: AsignacionSemana[] = [{ fecha: '2026-09-07', orden: 1, plato: plato('Pasta', ['pasta']) }]
     const resultado = evaluarSemana(asignaciones, [regla({ activa: false })])

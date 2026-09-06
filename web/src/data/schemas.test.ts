@@ -117,6 +117,18 @@ describe('planEntryRowSchema', () => {
     expect(resultado.success).toBe(true)
     expect(resultado.success && resultado.data.orden).toBe(2)
   })
+
+  it('rechaza orden fuera del rango 1..2', () => {
+    const resultado = planEntryRowSchema.safeParse({
+      id: 1,
+      fecha: '2026-09-07',
+      turno: 'COMIDA',
+      orden: 3,
+      id_plato: 3,
+      notas: ''
+    })
+    expect(resultado.success).toBe(false)
+  })
 })
 
 describe('bootstrapEnvelopeSchema', () => {
