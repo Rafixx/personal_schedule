@@ -197,3 +197,27 @@ resultado esperado:
 plan puede construir el dominio puro (temporadas, reglas, cálculo de la
 compra) y la capa de datos del frontend (zod, mappers, cliente HTTP, hooks
 de TanStack Query) contra este contrato sin más cambios en Apps Script.
+
+## Dominio y capa de datos del frontend (implementado)
+
+`web/src/domain/` (sin React, 100% puro y testeado):
+- `types.ts` — `Plato`, `Ingrediente`, `IngredientePlato`, `PlanEntry`, `Regla`, `Proveedor`, `Catalogo`.
+- `temporadas.ts` — `temporadaDe(fechaIso)`, `estaEnTemporada(temporadas, fechaIso)`.
+- `reglas.ts` — `evaluarSemana(asignaciones, reglas)` → `EstadoRegla[]`. Cubre `MAX_SEMANA`,
+  `MIN_SEMANA` y `NO_CONSECUTIVO` (con distancia real en días, no solo orden en el array).
+- `compra.ts` — `calcularCompra(plan, catalogo)` → `ListaCompra[]` agrupada por proveedor. El
+  caller filtra `plan` al rango de fechas antes de llamar.
+
+`web/src/data/`:
+- `schemas.ts` — un esquema zod por pestaña + `parseRows()`, que valida fila a fila y descarta
+  las inválidas sin romper el resto. `activo`/`activa` usan un preprocesador propio en vez de
+  `z.coerce.boolean()` (evita el caso `Boolean("false") === true`).
+- `mappers.ts` — fila cruda (columnas en español, `_row` incluido) → objeto de dominio.
+- `sheetsClient.ts` — `createSheetsClient({baseUrl, token})`, POST siempre `text/plain`.
+- `client.ts` — instancia única leyendo `VITE_API_URL`/`VITE_API_TOKEN` (ver `web/.env.example`).
+- `queries.ts` — `useCatalogo()` (devuelve también `filasInvalidas`), `usePlan(desde, hasta)`,
+  `useSetPlanEntry()`, `useMovePlanEntry()`, `useDeletePlanEntry()`.
+
+Pendiente para el plan del planificador: montar `QueryClientProvider` (con
+`persistQueryClient` + `idb-keyval` para offline) en `main.tsx`, y las mutaciones de
+`plato`/`ingrediente`/`regla` para la página de catálogo.
