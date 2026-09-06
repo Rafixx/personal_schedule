@@ -1,6 +1,6 @@
 # Segundo hueco por comida (primero/segundo) — Dominio y datos — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Propagar el campo `orden` (1=primero, 2=segundo), ya soportado por la API de Apps Script y verificado en producción, a través de `domain/` y `data/`: tipos, evaluación de reglas (que ahora debe considerar hasta dos platos por día), esquemas zod, mappers y hooks de mutación.
 
@@ -30,7 +30,7 @@
 - Consumes: nada nuevo
 - Produces: `Orden` (`1 | 2`), `PlanEntry.orden`, `AsignacionSemana{fecha, orden, plato}` — usados por `mappers.ts` (Task 2) y por el futuro plan de la UI del planificador.
 
-- [ ] **Step 1: Añadir el tipo `Orden` y el campo `orden` a `PlanEntry` en `types.ts`**
+- [x] **Step 1: Añadir el tipo `Orden` y el campo `orden` a `PlanEntry` en `types.ts`**
 
 En `web/src/domain/types.ts`, añadir antes de `export interface PlanEntry` la línea:
 
@@ -51,7 +51,7 @@ export interface PlanEntry {
 }
 ```
 
-- [ ] **Step 2: Reescribir `reglas.test.ts` con la nueva forma de `AsignacionSemana` y el caso del mismo día**
+- [x] **Step 2: Reescribir `reglas.test.ts` con la nueva forma de `AsignacionSemana` y el caso del mismo día**
 
 Reemplazar el contenido completo de `web/src/domain/reglas.test.ts` por:
 
@@ -147,12 +147,12 @@ describe('evaluarSemana', () => {
 })
 ```
 
-- [ ] **Step 3: Ejecutar el test y ver que falla**
+- [x] **Step 3: Ejecutar el test y ver que falla**
 
 Run: `cd web && npx vitest run src/domain/reglas.test.ts`
 Expected: FAIL — los literales `AsignacionSemana` ya incluyen `orden`, que la interfaz actual no declara (error de tipos) y el caso "mismo día" no está contemplado por `hayConsecutivos`.
 
-- [ ] **Step 4: Reescribir `reglas.ts`**
+- [x] **Step 4: Reescribir `reglas.ts`**
 
 Reemplazar el contenido completo de `web/src/domain/reglas.ts` por:
 
@@ -234,12 +234,12 @@ export function evaluarSemana(asignaciones: AsignacionSemana[], reglas: Regla[])
 }
 ```
 
-- [ ] **Step 5: Ejecutar el test y ver que pasa**
+- [x] **Step 5: Ejecutar el test y ver que pasa**
 
 Run: `cd web && npx vitest run src/domain/reglas.test.ts`
 Expected: PASS (8 tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add web/src/domain/types.ts web/src/domain/reglas.ts web/src/domain/reglas.test.ts
@@ -260,7 +260,7 @@ git commit -m "feat: soportar dos huecos por comida en tipos y evaluación de re
 - Consumes: `Orden`, `PlanEntry` de `domain/types.ts` (Task 1)
 - Produces: `planEntryRowSchema` con `orden`; `mapPlanEntry` con `orden` — usados por `queries.ts` (Task 3)
 
-- [ ] **Step 1: Escribir el test de `schemas.ts` para `orden`**
+- [x] **Step 1: Escribir el test de `schemas.ts` para `orden`**
 
 Añadir a `web/src/data/schemas.test.ts`, dentro de un nuevo bloque `describe('planEntryRowSchema', ...)` (añadir el import de `planEntryRowSchema` al `import { ... } from './schemas'` existente):
 
@@ -281,12 +281,12 @@ describe('planEntryRowSchema', () => {
 })
 ```
 
-- [ ] **Step 2: Ejecutar el test y ver que falla**
+- [x] **Step 2: Ejecutar el test y ver que falla**
 
 Run: `cd web && npx vitest run src/data/schemas.test.ts`
 Expected: FAIL — `planEntryRowSchema` no tiene campo `orden` todavía (zod lo ignora silenciosamente, así que `resultado.data.orden` es `undefined`, no `2`).
 
-- [ ] **Step 3: Añadir `orden` a `planEntryRowSchema`**
+- [x] **Step 3: Añadir `orden` a `planEntryRowSchema`**
 
 En `web/src/data/schemas.ts`, dentro de `planEntryRowSchema`, añadir el campo (junto a `turno`):
 
@@ -301,12 +301,12 @@ export const planEntryRowSchema = z.object({
 })
 ```
 
-- [ ] **Step 4: Ejecutar el test y ver que pasa**
+- [x] **Step 4: Ejecutar el test y ver que pasa**
 
 Run: `cd web && npx vitest run src/data/schemas.test.ts`
 Expected: PASS (7 tests)
 
-- [ ] **Step 5: Escribir el test de `mapPlanEntry`**
+- [x] **Step 5: Escribir el test de `mapPlanEntry`**
 
 Añadir a `web/src/data/mappers.test.ts` (añadir `mapPlanEntry` al import existente `import { mapIngrediente, mapPlato } from './mappers'`):
 
@@ -333,12 +333,12 @@ describe('mapPlanEntry', () => {
 })
 ```
 
-- [ ] **Step 6: Ejecutar el test y ver que falla**
+- [x] **Step 6: Ejecutar el test y ver que falla**
 
 Run: `cd web && npx vitest run src/data/mappers.test.ts`
 Expected: FAIL — `mapPlanEntry` todavía no incluye `orden` en el objeto que devuelve.
 
-- [ ] **Step 7: Añadir `orden` a `mapPlanEntry`**
+- [x] **Step 7: Añadir `orden` a `mapPlanEntry`**
 
 En `web/src/data/mappers.ts`, reemplazar la función `mapPlanEntry`:
 
@@ -355,12 +355,12 @@ export function mapPlanEntry(row: z.infer<typeof planEntryRowSchema>): PlanEntry
 }
 ```
 
-- [ ] **Step 8: Ejecutar el test y ver que pasa**
+- [x] **Step 8: Ejecutar el test y ver que pasa**
 
 Run: `cd web && npx vitest run src/data/mappers.test.ts`
 Expected: PASS (4 tests)
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add web/src/data/schemas.ts web/src/data/schemas.test.ts web/src/data/mappers.ts web/src/data/mappers.test.ts
@@ -380,7 +380,7 @@ git commit -m "feat: soportar orden en esquemas zod y mappers de plan"
 - Consumes: `PlanEntry.orden` (Task 1), `planEntryRowSchema`/`mapPlanEntry` con `orden` (Task 2)
 - Produces: `useSetPlanEntry`, `useMovePlanEntry`, `useDeletePlanEntry` con `orden` en su payload — contrato final que consumirá la UI del planificador (siguiente plan)
 
-- [ ] **Step 1: Actualizar el test de `useSetPlanEntry`**
+- [x] **Step 1: Actualizar el test de `useSetPlanEntry`**
 
 En `web/src/data/queries.test.tsx`, dentro de `describe('useSetPlanEntry', ...)`, cambiar el `body.payload` esperado y la llamada a `mutate`:
 
@@ -402,12 +402,12 @@ describe('useSetPlanEntry', () => {
 })
 ```
 
-- [ ] **Step 2: Ejecutar el test y ver que falla**
+- [x] **Step 2: Ejecutar el test y ver que falla**
 
 Run: `cd web && npx vitest run src/data/queries.test.tsx`
 Expected: FAIL — `NuevaAsignacion` no acepta `orden` todavía (error de tipos) y el payload real enviado no lo incluye.
 
-- [ ] **Step 3: Añadir `orden` a `NuevaAsignacion` y `ExtremoPlan` en `queries.ts`**
+- [x] **Step 3: Añadir `orden` a `NuevaAsignacion` y `ExtremoPlan` en `queries.ts`**
 
 En `web/src/data/queries.ts`, reemplazar las dos interfaces y la función `useSetPlanEntry`:
 
@@ -448,12 +448,12 @@ interface ExtremoPlan {
 import type { Catalogo, Orden, PlanEntry, Turno } from '../domain/types'
 ```
 
-- [ ] **Step 4: Ejecutar el test y ver que pasa**
+- [x] **Step 4: Ejecutar el test y ver que pasa**
 
 Run: `cd web && npx vitest run src/data/queries.test.tsx`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Verificación completa**
+- [x] **Step 5: Verificación completa**
 
 ```bash
 cd web
@@ -464,7 +464,7 @@ npm run build
 
 Expected: los tres comandos terminan sin error. El recuento de tests debe subir en 3 respecto al plan anterior (reglas +1, schemas +1, mappers +1) menos los que se sobrescribieron uno a uno — el total exacto lo confirma la salida de `npm run test`.
 
-- [ ] **Step 6: Actualizar la spec**
+- [x] **Step 6: Actualizar la spec**
 
 En `docs/specs/2026-09-06-menu-familiar-design.md`, en la sección "Dominio y capa de datos del frontend (implementado)", actualizar la línea de `reglas.ts` y añadir una línea sobre `orden`:
 
@@ -485,7 +485,7 @@ punta a punta (API, dominio, esquemas, mappers, hooks) — la UI del planificado
 construirse directamente sobre `useSetPlanEntry`/`useMovePlanEntry`/`useDeletePlanEntry`.
 ```
 
-- [ ] **Step 7: Commit y push**
+- [x] **Step 7: Commit y push**
 
 ```bash
 git add web/src/data/queries.ts web/src/data/queries.test.tsx docs/specs/2026-09-06-menu-familiar-design.md
