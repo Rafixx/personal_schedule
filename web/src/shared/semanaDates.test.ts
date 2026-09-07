@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fechasSemana, formatearRangoSemana, hoyIso, lunesDe } from './semanaDates'
+import { fechasSemana, fechasSemanaCompleta, formatearRangoSemana, hoyIso, lunesDe } from './semanaDates'
 
 describe('lunesDe', () => {
   it('devuelve el lunes de la semana para cualquier día de esa semana', () => {
@@ -20,6 +20,21 @@ describe('fechasSemana', () => {
       '2026-09-09',
       '2026-09-10',
       '2026-09-11'
+    ])
+  })
+})
+
+describe('fechasSemanaCompleta', () => {
+  it('devuelve las 7 fechas ISO consecutivas de lunes a domingo', () => {
+    const lunes = new Date(2026, 8, 7)
+    expect(fechasSemanaCompleta(lunes)).toEqual([
+      '2026-09-07',
+      '2026-09-08',
+      '2026-09-09',
+      '2026-09-10',
+      '2026-09-11',
+      '2026-09-12',
+      '2026-09-13'
     ])
   })
 })

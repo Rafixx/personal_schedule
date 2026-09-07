@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { addWeeks } from 'date-fns'
 import type { Orden } from '../../domain/types'
-import { fechasSemana, formatearRangoSemana, hoyIso, lunesDe } from '../../shared/semanaDates'
+import { fechasSemanaCompleta, formatearRangoSemana, hoyIso, lunesDe } from '../../shared/semanaDates'
 import { useWeekPlan } from './useWeekPlan'
 import { useMonthPlan } from './useMonthPlan'
 import { Toolbar } from './Toolbar'
@@ -37,20 +37,24 @@ export function PlannerPage() {
       {vista === 'semana' && <RulesStrip estados={semana.estadosRegla} />}
 
       {vista === 'semana' ? (
-        <main className="grid grid-cols-1 gap-4 px-5 pt-3.5 lg:grid-cols-[1fr_300px]">
-          <WeekBoard
-            dias={semana.dias}
-            hoyIso={hoyIso()}
-            onAbrirPicker={(fecha, orden) => setPicker({ fecha, orden })}
-            onQuitar={(fecha, orden) => semana.quitarPlato(fecha, orden)}
-          />
-          <Recetario platos={semana.platosActivos} />
-        </main>
+        semana.cargando ? (
+          <p className="px-5 pt-3.5 text-center text-neutral-500">Cargando…</p>
+        ) : (
+          <main className="grid grid-cols-1 gap-4 px-5 pt-3.5 lg:grid-cols-[1fr_300px]">
+            <WeekBoard
+              dias={semana.dias}
+              hoyIso={hoyIso()}
+              onAbrirPicker={(fecha, orden) => setPicker({ fecha, orden })}
+              onQuitar={(fecha, orden) => semana.quitarPlato(fecha, orden)}
+            />
+            <Recetario platos={semana.platosActivos} />
+          </main>
+        )
       ) : (
         <div className="px-5 pt-3.5">
           <MonthView
             dias={mes.dias}
-            fechasSemanaActual={fechasSemana(lunes)}
+            fechasSemanaActual={fechasSemanaCompleta(lunes)}
             onSeleccionarDia={(fecha) => {
               setLunes(lunesDe(new Date(`${fecha}T00:00:00`)))
               setVista('semana')
@@ -60,6 +64,7 @@ export function PlannerPage() {
       )}
 
       <PlatoPicker
+        key={picker ? `${picker.fecha}-${picker.orden}` : 'cerrado'}
         abierto={picker !== null}
         tituloHueco={picker ? NOMBRE_HUECO[picker.orden] : ''}
         platos={semana.platosActivos}

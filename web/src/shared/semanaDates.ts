@@ -11,6 +11,10 @@ export function fechasSemana(lunes: Date): string[] {
   return Array.from({ length: 5 }, (_, i) => format(addDays(lunes, i), 'yyyy-MM-dd'))
 }
 
+export function fechasSemanaCompleta(lunes: Date): string[] {
+  return Array.from({ length: 7 }, (_, i) => format(addDays(lunes, i), 'yyyy-MM-dd'))
+}
+
 export function formatearRangoSemana(lunes: Date): string {
   const viernes = addDays(lunes, 4)
   const mismoMes = lunes.getMonth() === viernes.getMonth()

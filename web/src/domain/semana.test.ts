@@ -51,4 +51,11 @@ describe('platosDelDia', () => {
   it('devuelve una lista vacía si no hay asignaciones ese día', () => {
     expect(platosDelDia('2026-09-09', [], [])).toEqual([])
   })
+
+  it('devuelve los platos ordenados por orden aunque las entradas lleguen desordenadas', () => {
+    const platos = [plato(5, 'Pasta'), plato(8, 'Salmón')]
+    const entries = [entrada('2026-09-07', 2, 8), entrada('2026-09-07', 1, 5)]
+    const resultado = platosDelDia('2026-09-07', entries, platos)
+    expect(resultado).toEqual([platos[0], platos[1]])
+  })
 })

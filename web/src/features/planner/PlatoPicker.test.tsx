@@ -53,4 +53,16 @@ describe('PlatoPicker', () => {
     await userEvent.type(screen.getByPlaceholderText('Buscar plato…'), 'zzz')
     expect(screen.getByText('Ningún plato coincide')).toBeInTheDocument()
   })
+
+  it('expone semántica de diálogo accesible cuando está abierto', () => {
+    render(<PlatoPicker abierto tituloHueco="Primero" platos={[]} onElegir={vi.fn()} onCerrar={vi.fn()} />)
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true')
+  })
+
+  it('llama a onCerrar al pulsar Escape', async () => {
+    const onCerrar = vi.fn()
+    render(<PlatoPicker abierto tituloHueco="Primero" platos={[]} onElegir={vi.fn()} onCerrar={onCerrar} />)
+    await userEvent.keyboard('{Escape}')
+    expect(onCerrar).toHaveBeenCalledOnce()
+  })
 })

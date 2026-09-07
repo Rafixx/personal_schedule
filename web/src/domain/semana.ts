@@ -26,6 +26,7 @@ export function platosDelDia(fecha: string, entries: PlanEntry[], platos: Plato[
   const platoPorId = new Map(platos.map((p) => [p.id, p]))
   return entries
     .filter((e) => e.fecha === fecha)
+    .sort((a, b) => a.orden - b.orden)
     .map((e) => platoPorId.get(e.idPlato))
     .filter((p): p is Plato => p !== undefined)
 }

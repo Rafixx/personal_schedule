@@ -100,6 +100,7 @@ export function useSetPlanEntry() {
         id_plato: entrada.idPlato,
         notas: entrada.notas ?? ''
       }),
+    retry: 2,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
   })
 }
@@ -122,6 +123,7 @@ export function useDeletePlanEntry() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (args: ExtremoPlan) => sheetsClient.apiPost('plan.delete', args),
+    retry: 2,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
   })
 }

@@ -23,7 +23,7 @@ export function Recetario({ platos }: RecetarioProps) {
         />
       </div>
       <div className="flex flex-col gap-2 overflow-y-auto pr-0.5">
-        {filtrados.length === 0 && <p className="py-3.5 text-center text-sm text-neutral-400">Ningún plato coincide</p>}
+        {filtrados.length === 0 && <p className="py-3.5 text-center text-sm text-neutral-500">Ningún plato coincide</p>}
         {filtrados.map((plato) => (
           <DishChip key={plato.id} plato={plato} />
         ))}

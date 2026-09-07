@@ -32,7 +32,7 @@ export function useWeekPlan(lunes: Date) {
     platosActivos,
     cargando: catalogo.isLoading || plan.isLoading,
     error: catalogo.isError || plan.isError || setPlanEntry.isError || deletePlanEntry.isError,
-    guardando: setPlanEntry.isPending || deletePlanEntry.isPending,
+    guardando: setPlanEntry.isPending || deletePlanEntry.isPending || plan.isFetching,
     asignarPlato,
     quitarPlato
   }

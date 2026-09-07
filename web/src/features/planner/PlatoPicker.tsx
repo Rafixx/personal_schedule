@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Plato } from '../../domain/types'
 import { colorVarDeEtiqueta } from '../../shared/tagColors'
 
@@ -13,6 +13,15 @@ export interface PlatoPickerProps {
 export function PlatoPicker({ abierto, tituloHueco, platos, onElegir, onCerrar }: PlatoPickerProps) {
   const [busqueda, setBusqueda] = useState('')
 
+  useEffect(() => {
+    if (!abierto) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCerrar()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [abierto, onCerrar])
+
   if (!abierto) return null
 
   const filtrados = platos.filter((p) => p.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()))
@@ -20,13 +29,16 @@ export function PlatoPicker({ abierto, tituloHueco, platos, onElegir, onCerrar }
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="plato-picker-titulo"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCerrar()
       }}
     >
       <div className="flex max-h-[80vh] w-full max-w-md flex-col gap-3 rounded-2xl bg-white p-4.5 shadow-xl dark:bg-neutral-800">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Elegir plato · {tituloHueco}</h3>
+          <h3 id="plato-picker-titulo" className="text-lg font-semibold">Elegir plato · {tituloHueco}</h3>
           <button
             type="button"
             onClick={onCerrar}
@@ -45,7 +57,7 @@ export function PlatoPicker({ abierto, tituloHueco, platos, onElegir, onCerrar }
           className="w-full rounded-lg border-[1.5px] border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-base dark:border-neutral-600 dark:bg-neutral-900"
         />
         <div className="flex flex-col gap-2 overflow-y-auto">
-          {filtrados.length === 0 && <p className="py-3.5 text-center text-sm text-neutral-400">Ningún plato coincide</p>}
+          {filtrados.length === 0 && <p className="py-3.5 text-center text-sm text-neutral-500">Ningún plato coincide</p>}
           {filtrados.map((plato) => {
             const etiqueta = plato.etiquetas[0]
             const colorVar = etiqueta ? colorVarDeEtiqueta(etiqueta) : 'var(--tag-color-0)'

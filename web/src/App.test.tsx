@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -61,5 +61,22 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: /gazpacho/i }))
     await waitFor(() => expect(screen.queryByText('Elegir plato · Primero')).not.toBeInTheDocument())
     await waitFor(() => expect(accionRecibida).toBe('plan.set'))
+  })
+
+  it('reinicia el buscador del selector al abrirlo para un hueco distinto', async () => {
+    mockBootstrapYPlan()
+    renderApp()
+    const botonesAñadir = await screen.findAllByRole('button', { name: /añadir/i })
+    await userEvent.click(botonesAñadir[0])
+    const dialogo = await screen.findByRole('dialog')
+    await userEvent.type(within(dialogo).getByPlaceholderText('Buscar plato…'), 'gazp')
+    expect(within(dialogo).getByPlaceholderText('Buscar plato…')).toHaveValue('gazp')
+    await userEvent.click(within(dialogo).getByRole('button', { name: /cerrar/i }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    const botonesAñadirTrasCierre = await screen.findAllByRole('button', { name: /añadir/i })
+    await userEvent.click(botonesAñadirTrasCierre[1])
+    const dialogoDos = await screen.findByRole('dialog')
+    expect(within(dialogoDos).getByPlaceholderText('Buscar plato…')).toHaveValue('')
   })
 })
