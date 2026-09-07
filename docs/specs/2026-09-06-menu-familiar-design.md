@@ -226,11 +226,11 @@ de TanStack Query) contra este contrato sin más cambios en Apps Script.
 - `queries.ts` — `useCatalogo()` (devuelve también `filasInvalidas`), `usePlan(desde, hasta)`,
   `useSetPlanEntry()`, `useMovePlanEntry()`, `useDeletePlanEntry()`.
 
-Pendiente para el plan del planificador: montar `QueryClientProvider` (con
-`persistQueryClient` + `idb-keyval` para offline) en `main.tsx`, y las mutaciones de
-`plato`/`ingrediente`/`regla` para la página de catálogo. `orden` ya está soportado de
-punta a punta (API, dominio, esquemas, mappers, hooks) — la UI del planificador puede
-construirse directamente sobre `useSetPlanEntry`/`useMovePlanEntry`/`useDeletePlanEntry`.
+Pendiente: las mutaciones de `plato`/`ingrediente`/`regla` para la página de
+catálogo, y la lista de la compra (`compra.ts` ya existe y está testeado,
+falta la UI). El planificador (calendario, recetario, selector, avisos de
+reglas, vista de mes, persistencia offline) ya está construido — ver la
+siguiente sección.
 
 ## Resultado de la verificación del segundo hueco (orden)
 
@@ -249,3 +249,37 @@ a la pestaña `plan` y a `plan.set`/`plan.delete`/`plan.move`:
 plan puede actualizar `domain/` y `data/` (tipos, `evaluarSemana`, esquemas,
 mappers, hooks) para soportar `orden`, y después construir la UI del
 planificador en React sobre la maqueta ya validada por Rafa.
+
+## Planificador (UI implementada)
+
+`web/src/features/planner/` — interacción solo por toque (sin arrastrar; el
+arrastrar-y-soltar de la maqueta queda para un plan posterior, como capa
+aditiva sobre estos mismos componentes):
+
+- `PlannerPage.tsx` — página principal, monta todo lo demás.
+- `Toolbar.tsx` — navegación de semana, alternar semana/mes, indicador de
+  sincronización (refleja también errores de las mutaciones, no solo de las
+  lecturas).
+- `RulesStrip.tsx` — chips con el resultado de `evaluarSemana` en vivo.
+- `WeekBoard.tsx`/`DayCell.tsx`/`Slot.tsx`/`DishTile.tsx` — rejilla de 5 días
+  × 2 huecos; hueco vacío abre `PlatoPicker`, hueco ocupado tiene botón de
+  quitar. `DishTile` avisa si la fecha cae fuera de la temporada del plato
+  (`domain/temporadas.ts`).
+- `Recetario.tsx`/`DishChip.tsx` — búsqueda por nombre sobre los platos
+  activos del catálogo.
+- `PlatoPicker.tsx` — selector modal con búsqueda, única vía para asignar un
+  plato en este plan.
+- `MonthView.tsx` + `useMonthPlan.ts` — vista de solo lectura de 42 celdas
+  con un punto de color por plato asignado; tocar un día salta a esa semana.
+- `useWeekPlan.ts` — conecta `usePlan`/`useCatalogo`/`useSetPlanEntry`/
+  `useDeletePlanEntry` con `domain/semana.ts` y `domain/reglas.ts`.
+- `domain/semana.ts` — `construirSemana`, `aAsignaciones`, `platosDelDia`:
+  puro, sin React, testeado.
+- `shared/semanaDates.ts` / `shared/tagColors.ts` — utilidades de fecha
+  (`date-fns`) y la paleta de 7 colores por etiqueta (variables CSS en
+  `index.css`, ya validada como CVD-safe).
+- `main.tsx` monta `PersistQueryClientProvider` con `idb-keyval` — el plan
+  de la semana visitada sobrevive a un refresco sin conexión.
+
+Pendiente (plan posterior): arrastrar-y-soltar sobre estos mismos
+componentes.
