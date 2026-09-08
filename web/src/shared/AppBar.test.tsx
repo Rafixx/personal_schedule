@@ -26,4 +26,13 @@ describe('AppBar', () => {
     expect(screen.getByRole('link', { name: 'Compra' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Planificador' })).not.toHaveAttribute('aria-current')
   })
+
+  it('muestra el enlace a Catálogo', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppBar />
+      </MemoryRouter>
+    )
+    expect(screen.getByRole('link', { name: 'Catálogo' })).toBeInTheDocument()
+  })
 })

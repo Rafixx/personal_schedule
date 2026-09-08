@@ -17,6 +17,9 @@ export function AppBar({ children }: { children?: ReactNode }) {
         <NavLink to="/compra" className={claseEnlace}>
           Compra
         </NavLink>
+        <NavLink to="/catalogo" className={claseEnlace}>
+          Catálogo
+        </NavLink>
       </nav>
       {children}
     </header>

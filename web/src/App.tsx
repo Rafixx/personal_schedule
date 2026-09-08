@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { PlannerPage } from './features/planner/PlannerPage'
 import type { VistaPlanner } from './features/planner/Toolbar'
 import { ShoppingListPage } from './features/shopping/ShoppingListPage'
+import { CatalogPage } from './features/catalog/CatalogPage'
 import { lunesDe } from './shared/semanaDates'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <Routes>
         <Route path="/" element={<PlannerPage lunes={lunes} setLunes={setLunes} vista={vista} setVista={setVista} />} />
         <Route path="/compra" element={<ShoppingListPage />} />
+        <Route path="/catalogo" element={<CatalogPage />} />
       </Routes>
     </BrowserRouter>
   )

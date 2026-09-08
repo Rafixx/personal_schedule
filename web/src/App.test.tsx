@@ -115,4 +115,15 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('link', { name: /planificador/i }))
     expect(await screen.findByText(rangoSiguiente)).toBeInTheDocument()
   })
+
+  it('navega al catálogo desde la barra de navegación', async () => {
+    mockBootstrapYPlan()
+    renderApp()
+    await screen.findByText('Recetario')
+
+    await userEvent.click(screen.getByRole('link', { name: /catálogo/i }))
+
+    expect(await screen.findByRole('tab', { name: 'Platos' })).toBeInTheDocument()
+    expect(screen.queryByText('Recetario')).not.toBeInTheDocument()
+  })
 })
