@@ -3,6 +3,7 @@ import { addWeeks } from 'date-fns'
 import type { Dispatch, SetStateAction } from 'react'
 import type { Orden } from '../../domain/types'
 import { fechasSemanaCompleta, formatearRangoSemana, hoyIso, lunesDe } from '../../shared/semanaDates'
+import { AppBar } from '../../shared/AppBar'
 import { useWeekPlan } from './useWeekPlan'
 import { useMonthPlan } from './useMonthPlan'
 import { Toolbar } from './Toolbar'
@@ -30,15 +31,17 @@ export function PlannerPage({ lunes, setLunes, vista, setVista }: PlannerPagePro
 
   return (
     <div className="mx-auto max-w-[1560px] pb-7">
-      <Toolbar
-        rangoSemana={formatearRangoSemana(lunes)}
-        vista={vista}
-        guardando={semana.guardando}
-        error={semana.error}
-        onSemanaAnterior={() => setLunes((actual) => addWeeks(actual, -1))}
-        onSemanaSiguiente={() => setLunes((actual) => addWeeks(actual, 1))}
-        onCambiarVista={setVista}
-      />
+      <AppBar>
+        <Toolbar
+          rangoSemana={formatearRangoSemana(lunes)}
+          vista={vista}
+          guardando={semana.guardando}
+          error={semana.error}
+          onSemanaAnterior={() => setLunes((actual) => addWeeks(actual, -1))}
+          onSemanaSiguiente={() => setLunes((actual) => addWeeks(actual, 1))}
+          onCambiarVista={setVista}
+        />
+      </AppBar>
 
       {vista === 'semana' && <RulesStrip estados={semana.estadosRegla} />}
 

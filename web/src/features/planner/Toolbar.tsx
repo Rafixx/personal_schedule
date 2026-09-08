@@ -23,7 +23,7 @@ export function Toolbar({
   const colorDot = error ? 'bg-amber-600' : guardando ? 'bg-amber-500 animate-pulse' : 'bg-green-600'
 
   return (
-    <header className="flex items-center justify-between gap-4 rounded-b-2xl bg-neutral-900 px-5 py-3.5 text-neutral-100 shadow-lg">
+    <div className="flex flex-1 flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-2.5">
         <button
           type="button"
@@ -70,6 +70,6 @@ export function Toolbar({
         <span className={`h-2.5 w-2.5 rounded-full ${colorDot}`} />
         {textoSync}
       </span>
-    </header>
+    </div>
   )
 }

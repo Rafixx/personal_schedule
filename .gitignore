@@ -14,3 +14,6 @@ apps-script/API_TOKEN.txt
 # editor / SO
 .DS_Store
 *.log
+
+# scratch de herramientas de Claude Code (workspaces SDD, mockups del brainstorming visual)
+.superpowers/

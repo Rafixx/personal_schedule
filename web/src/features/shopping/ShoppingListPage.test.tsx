@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../test/mswServer'
 import { fechasSemana, lunesDe } from '../../shared/semanaDates'
@@ -13,7 +14,11 @@ const fechaHoy = fechasSemana(lunesDe(new Date()))[0]
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/compra']}>{children}</MemoryRouter>
+    </QueryClientProvider>
+  )
 }
 
 function mockApi(entries: Array<{ fecha: string; [clave: string]: unknown }>) {
