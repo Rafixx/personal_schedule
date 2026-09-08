@@ -289,7 +289,7 @@ aditiva sobre estos mismos componentes):
 Pendiente (plan posterior): arrastrar-y-soltar sobre estos mismos
 componentes.
 
-## Lista de la compra (diseño)
+## Lista de la compra (implementada)
 
 Primer uso real de `react-router-dom` (dependencia instalada desde el scaffolding
 original pero nunca usada hasta ahora) — necesario porque, a partir de esta
@@ -326,6 +326,13 @@ navegación por semana dentro de esa página.
 test de integración de `ShoppingListPage` (navegar a `/compra`, ver proveedores,
 marcar comprado, cambiar de semana, copiar). `navigator.clipboard` no existe en
 jsdom por defecto — se añade un mock mínimo a `test/setup.ts`.
+
+**Implementado:** todo lo descrito arriba, construido tal cual. `App.tsx`
+monta `BrowserRouter` con `NavBar` + rutas `/` (planificador) y `/compra`
+(lista de la compra) — primer uso real de `react-router-dom` en el proyecto.
+Verificado manualmente contra la API real: agregación por proveedor,
+persistencia de "ya comprado" tras refrescar, checklists independientes entre
+"esta semana" y "la semana que viene", y copiar al portapapeles.
 
 Pendiente (plan posterior): catálogo (CRUD de platos/ingredientes/reglas),
 Recetario interactivo, navegación real de mes en la vista Mes del planificador.
