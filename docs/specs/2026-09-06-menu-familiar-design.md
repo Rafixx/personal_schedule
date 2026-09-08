@@ -295,15 +295,14 @@ Primer uso real de `react-router-dom` (dependencia instalada desde el scaffoldin
 original pero nunca usada hasta ahora) — necesario porque, a partir de esta
 funcionalidad, la app deja de tener una única pantalla.
 
-**Navegación:** `App.tsx` monta `BrowserRouter`, con `NavBar` + `<Routes>` para
-`/` → `PlannerPage` y `/compra` → `ShoppingListPage`; también posee el estado de
+**Navegación:** `App.tsx` monta `BrowserRouter` con `<Routes>` para `/` →
+`PlannerPage` y `/compra` → `ShoppingListPage`; también posee el estado de
 semana/vista del planificador (`lunes`/`vista`) para que sobreviva a navegar a
 `/compra` y volver (`PlannerPage` los recibe como props en vez de tenerlos como
 estado propio, ya que al pasar a routing deja de ser un componente que nunca se
-desmonta). Una barra de navegación mínima y persistente (fuera de ambas
-páginas) enlaza "Planificador"/"Compra" — separada del `Toolbar` del
-planificador, que sigue ocupándose solo de la navegación por semana dentro de
-esa página.
+desmonta). La navegación entre herramientas vive en `shared/AppBar.tsx` — ver
+la nota "Barra unificada" más abajo, añadida en un ajuste posterior a como se
+construyó originalmente esta funcionalidad.
 
 **`features/shopping/`:**
 - `useShoppingList(lunesActual: Date, rango: 'actual' | 'siguiente')` — calcula
@@ -338,11 +337,22 @@ marcar comprado, cambiar de semana, copiar). `navigator.clipboard` no existe en
 jsdom por defecto — se añade un mock mínimo a `test/setup.ts`.
 
 **Implementado:** todo lo descrito arriba, construido tal cual. `App.tsx`
-monta `BrowserRouter` con `NavBar` + rutas `/` (planificador) y `/compra`
-(lista de la compra) — primer uso real de `react-router-dom` en el proyecto.
-Verificado manualmente contra la API real: agregación por proveedor,
-persistencia de "ya comprado" tras refrescar, checklists independientes entre
-"esta semana" y "la semana que viene", y copiar al portapapeles.
+monta `BrowserRouter` con rutas `/` (planificador) y `/compra` (lista de la
+compra) — primer uso real de `react-router-dom` en el proyecto. Verificado
+manualmente contra la API real: agregación por proveedor, persistencia de "ya
+comprado" tras refrescar, checklists independientes entre "esta semana" y "la
+semana que viene", y copiar al portapapeles.
+
+**Barra unificada (ajuste posterior):** el `NavBar` inicial (una barra propia
+con los enlaces "Planificador"/"Compra", separada del `Toolbar` del
+planificador) se sustituyó por `shared/AppBar.tsx` — una única barra
+compartida que lleva el selector de herramienta (enlaces de texto subrayados,
+para distinguirlo visualmente de los controles de vista en pastilla ámbar) y
+un hueco (`children`) donde cada página coloca sus propios controles:
+`PlannerPage` pasa `<Toolbar>` (que dejó de renderizar su propia `<header>`,
+ahora solo aporta el contenido), y `ShoppingListPage` pasa su selector de
+rango + botón "Copiar", re-vestidos con el mismo lenguaje visual (pastillas
+`bg-white/10`, activa en ámbar) para encajar en la barra oscura.
 
 Pendiente (plan posterior): catálogo (CRUD de platos/ingredientes/reglas),
 Recetario interactivo, navegación real de mes en la vista Mes del planificador.
@@ -359,8 +369,11 @@ usados hasta ahora).
 
 **Navegación:** tercera ruta `/catalogo` → `CatalogPage`, con pestañas internas
 "Platos"/"Ingredientes"/"Reglas" (mismo patrón que el planificador ya usa para
-alternar Semana/Mes — pestaña interna, no sub-rutas). `NavBar` gana un tercer
-enlace "Catálogo".
+alternar Semana/Mes — pestaña interna, no sub-rutas). `shared/AppBar.tsx`
+(ver la sección de la lista de la compra) gana un tercer enlace "Catálogo";
+`CatalogPage` le pasa sus pestañas Platos/Ingredientes/Reglas como `children`,
+igual que `PlannerPage` le pasa `Toolbar` y `ShoppingListPage` le pasa su
+selector de rango.
 
 **Borrado — respeta la asimetría real de la API:**
 - Platos: `plato.delete` es borrado lógico (pone `activo=false`, la fila sigue
