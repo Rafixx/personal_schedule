@@ -295,21 +295,31 @@ Primer uso real de `react-router-dom` (dependencia instalada desde el scaffoldin
 original pero nunca usada hasta ahora) — necesario porque, a partir de esta
 funcionalidad, la app deja de tener una única pantalla.
 
-**Navegación:** `main.tsx` monta `BrowserRouter`; `App.tsx` define `<Routes>` con
-`/` → `PlannerPage` y `/compra` → `ShoppingListPage`. Una barra de navegación
-mínima y persistente (fuera de ambas páginas) enlaza "Planificador"/"Compra" —
-separada del `Toolbar` del planificador, que sigue ocupándose solo de la
-navegación por semana dentro de esa página.
+**Navegación:** `App.tsx` monta `BrowserRouter`, con `NavBar` + `<Routes>` para
+`/` → `PlannerPage` y `/compra` → `ShoppingListPage`; también posee el estado de
+semana/vista del planificador (`lunes`/`vista`) para que sobreviva a navegar a
+`/compra` y volver (`PlannerPage` los recibe como props en vez de tenerlos como
+estado propio, ya que al pasar a routing deja de ser un componente que nunca se
+desmonta). Una barra de navegación mínima y persistente (fuera de ambas
+páginas) enlaza "Planificador"/"Compra" — separada del `Toolbar` del
+planificador, que sigue ocupándose solo de la navegación por semana dentro de
+esa página.
 
 **`features/shopping/`:**
-- `useShoppingList(rango: 'actual' | 'siguiente')` — calcula `desde`/`hasta`
-  siempre anclado a hoy (no al estado de navegación del planificador, son
-  páginas independientes): `lunesDe(hoy)` + `fechasSemana` para "actual", o
-  `addWeeks(lunesDe(hoy), 1)` + `fechasSemana` para "siguiente"; llama a
-  `usePlan(desde,hasta)` +
-  `useCatalogo()` y pasa el resultado a `calcularCompra` (`domain/compra.ts`,
-  sin cambios). Devuelve `{listas: ListaCompra[], cargando, comprado(idIngrediente,
-  unidad), marcarComprado(idIngrediente, unidad, valor)}`.
+- `useShoppingList(lunesActual: Date, rango: 'actual' | 'siguiente')` — calcula
+  `desde`/`hasta` a partir de la fecha de referencia recibida como parámetro
+  (nunca `new Date()` dentro del hook, mismo patrón que
+  `useWeekPlan`/`useMonthPlan`): `fechasSemana(lunesActual)` para "actual", o
+  `fechasSemana(addWeeks(lunesActual, 1))` para "siguiente". `ShoppingListPage`
+  calcula `lunesActual = lunesDe(new Date())` una sola vez al montar (vía
+  `useState` perezoso) y ancla así el rango a hoy, independientemente de la
+  semana que esté viendo el planificador (son páginas independientes). Llama a
+  `usePlan(desde,hasta)` + `useCatalogo()` y pasa el resultado a `calcularCompra`
+  (`domain/compra.ts`, sin cambios). Devuelve `{listas: ListaCompra[], cargando,
+  error, comprado(idIngrediente, unidad), marcarComprado(idIngrediente, unidad,
+  valor)}` — `error` refleja fallos de `useCatalogo`/`usePlan` y
+  `ShoppingListPage` lo muestra como un aviso de "Sin conexión" distinto del
+  estado "sin platos".
 - Estado de "ya comprado" en `localStorage`, clave `compra:${desde}:${hasta}` →
   `{ "idIngrediente|unidad": true }`. Cada semana (actual/siguiente) tiene su
   propio checklist independiente — es estado del momento, no dato del dominio,

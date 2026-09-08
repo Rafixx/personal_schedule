@@ -40,8 +40,9 @@ export function useShoppingList(lunesActual: Date, rango: RangoCompra) {
     try {
       localStorage.setItem(claveComprado(desde, hasta), JSON.stringify(siguientes))
     } catch {
-      // localStorage puede fallar (modo privado, cuota agotada); el estado en memoria sigue
-      // funcionando el resto de la sesión aunque no sobreviva a un refresco.
+      // localStorage puede fallar (modo privado, cuota agotada); en ese caso la marca no
+      // persiste — comprados se deriva de localStorage en cada render, así que tampoco
+      // se refleja en memoria más allá de este render.
     }
     setVersion((v) => v + 1)
   }
@@ -51,6 +52,7 @@ export function useShoppingList(lunesActual: Date, rango: RangoCompra) {
   return {
     listas,
     cargando: catalogo.isLoading || plan.isLoading,
+    error: catalogo.isError || plan.isError,
     comprado,
     marcarComprado
   }

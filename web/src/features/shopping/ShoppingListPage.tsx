@@ -9,7 +9,7 @@ export function ShoppingListPage() {
   const [lunesActual] = useState(() => lunesDe(new Date()))
   const [rango, setRango] = useState<RangoCompra>('actual')
   const [copiado, setCopiado] = useState(false)
-  const { listas, cargando, comprado, marcarComprado } = useShoppingList(lunesActual, rango)
+  const { listas, cargando, error, comprado, marcarComprado } = useShoppingList(lunesActual, rango)
 
   async function copiar() {
     await navigator.clipboard.writeText(formatoTextoCompra(listas))
@@ -57,7 +57,12 @@ export function ShoppingListPage() {
       </div>
 
       {cargando && <p className="pt-6 text-center text-neutral-500">Cargando…</p>}
-      {!cargando && listas.length === 0 && (
+      {!cargando && error && (
+        <p className="pt-6 text-center text-amber-700 dark:text-amber-500">
+          Sin conexión — no se pudo cargar la lista de la compra.
+        </p>
+      )}
+      {!cargando && !error && listas.length === 0 && (
         <p className="pt-6 text-center text-neutral-500">No hay platos planificados para esta semana.</p>
       )}
 

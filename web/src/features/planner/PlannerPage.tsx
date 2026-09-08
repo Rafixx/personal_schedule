@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { addWeeks } from 'date-fns'
+import type { Dispatch, SetStateAction } from 'react'
 import type { Orden } from '../../domain/types'
 import { fechasSemanaCompleta, formatearRangoSemana, hoyIso, lunesDe } from '../../shared/semanaDates'
 import { useWeekPlan } from './useWeekPlan'
@@ -14,9 +15,14 @@ import { MonthView } from './MonthView'
 
 const NOMBRE_HUECO: Record<Orden, string> = { 1: 'Primero', 2: 'Segundo' }
 
-export function PlannerPage() {
-  const [lunes, setLunes] = useState(() => lunesDe(new Date()))
-  const [vista, setVista] = useState<VistaPlanner>('semana')
+export interface PlannerPageProps {
+  lunes: Date
+  setLunes: Dispatch<SetStateAction<Date>>
+  vista: VistaPlanner
+  setVista: Dispatch<SetStateAction<VistaPlanner>>
+}
+
+export function PlannerPage({ lunes, setLunes, vista, setVista }: PlannerPageProps) {
   const [picker, setPicker] = useState<{ fecha: string; orden: Orden } | null>(null)
 
   const semana = useWeekPlan(lunes)

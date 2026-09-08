@@ -16,7 +16,7 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
 
-function mockApi(entries: unknown[]) {
+function mockApi(entries: Array<{ fecha: string; [clave: string]: unknown }>) {
   server.use(
     http.get(API_URL, ({ request }) => {
       const url = new URL(request.url)
@@ -42,7 +42,14 @@ function mockApi(entries: unknown[]) {
           proveedores: [{ nombre: 'Mercadona', orden: 1 }]
         })
       }
-      return HttpResponse.json({ ok: true, entries })
+      // La API real filtra por desde/hasta en el servidor; el mock reproduce ese
+      // filtrado para que cambiar de rango (actual/siguiente) recalcule la lista.
+      const desde = url.searchParams.get('desde')
+      const hasta = url.searchParams.get('hasta')
+      const entriesEnRango = entries.filter(
+        (entrada) => (!desde || entrada.fecha >= desde) && (!hasta || entrada.fecha <= hasta)
+      )
+      return HttpResponse.json({ ok: true, entries: entriesEnRango })
     })
   )
 }
@@ -74,5 +81,22 @@ describe('ShoppingListPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /copiar/i }))
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('MERCADONA\n- Tomate: 500 g')
     expect(await screen.findByRole('button', { name: /copiado/i })).toBeInTheDocument()
+  })
+
+  it('muestra un aviso de conexión si la API falla', async () => {
+    server.use(http.get(API_URL, () => HttpResponse.json({ ok: false, error: 'fallo' }, { status: 500 })))
+    render(<ShoppingListPage />, { wrapper })
+    expect(await screen.findByText(/sin conexión/i)).toBeInTheDocument()
+  })
+
+  it('cambiar a la semana que viene recalcula la lista', async () => {
+    mockApi([{ id: 1, fecha: fechaHoy, turno: 'COMIDA', orden: 1, id_plato: 1, notas: '' }])
+    render(<ShoppingListPage />, { wrapper })
+    await screen.findByText('Mercadona')
+
+    await userEvent.click(screen.getByRole('button', { name: /la semana que viene/i }))
+
+    await waitFor(() => expect(screen.queryByText('Mercadona')).not.toBeInTheDocument())
+    expect(await screen.findByText('No hay platos planificados para esta semana.')).toBeInTheDocument()
   })
 })

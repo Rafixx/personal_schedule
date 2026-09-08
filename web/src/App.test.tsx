@@ -1,12 +1,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { addWeeks } from 'date-fns'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { server } from './test/mswServer'
+import { formatearRangoSemana, lunesDe } from './shared/semanaDates'
 import App from './App'
 
 const API_URL = 'https://script.example.com/exec'
+
+beforeEach(() => {
+  // BrowserRouter lee la URL real de jsdom, que no se resetea entre tests del
+  // mismo fichero: sin esto, un test que navega a /compra deja esa ruta activa
+  // para el siguiente test.
+  window.history.pushState({}, '', '/')
+})
 
 function renderApp() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -89,5 +98,21 @@ describe('App', () => {
 
     expect(await screen.findByRole('button', { name: /esta semana/i })).toBeInTheDocument()
     expect(screen.queryByText('Recetario')).not.toBeInTheDocument()
+  })
+
+  it('conserva la semana visible del planificador al navegar a la compra y volver', async () => {
+    mockBootstrapYPlan()
+    renderApp()
+    await screen.findByText('Recetario')
+
+    await userEvent.click(screen.getByRole('button', { name: /semana siguiente/i }))
+    const rangoSiguiente = formatearRangoSemana(addWeeks(lunesDe(new Date()), 1))
+    await screen.findByText(rangoSiguiente)
+
+    await userEvent.click(screen.getByRole('link', { name: /compra/i }))
+    await screen.findByRole('button', { name: /esta semana/i })
+
+    await userEvent.click(screen.getByRole('link', { name: /planificador/i }))
+    expect(await screen.findByText(rangoSiguiente)).toBeInTheDocument()
   })
 })
