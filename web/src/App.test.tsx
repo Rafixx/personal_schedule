@@ -79,4 +79,15 @@ describe('App', () => {
     const dialogoDos = await screen.findByRole('dialog')
     expect(within(dialogoDos).getByPlaceholderText('Buscar plato…')).toHaveValue('')
   })
+
+  it('navega a la lista de la compra desde la barra de navegación', async () => {
+    mockBootstrapYPlan()
+    renderApp()
+    await screen.findByText('Recetario')
+
+    await userEvent.click(screen.getByRole('link', { name: /compra/i }))
+
+    expect(await screen.findByRole('button', { name: /esta semana/i })).toBeInTheDocument()
+    expect(screen.queryByText('Recetario')).not.toBeInTheDocument()
+  })
 })
