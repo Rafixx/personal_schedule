@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import type { Plato } from '../../domain/types'
+import type { Ingrediente, IngredientePlato, Plato } from '../../domain/types'
 import { usePlatoDelete, usePlatoUpsert } from '../../data/queries'
 import { PlatoForm } from './PlatoForm'
 
 export interface PlatoListProps {
   platos: Plato[]
+  ingredientesDisponibles: Ingrediente[]
+  ingredientesPlato: IngredientePlato[]
 }
 
-export function PlatoList({ platos }: PlatoListProps) {
+export function PlatoList({ platos, ingredientesDisponibles, ingredientesPlato }: PlatoListProps) {
   const [editando, setEditando] = useState<Plato | 'nuevo' | null>(null)
   const platoDelete = usePlatoDelete()
   const platoUpsert = usePlatoUpsert()
@@ -28,9 +30,12 @@ export function PlatoList({ platos }: PlatoListProps) {
   }
 
   if (editando) {
+    const plato = editando === 'nuevo' ? undefined : editando
     return (
       <PlatoForm
-        plato={editando === 'nuevo' ? undefined : editando}
+        plato={plato}
+        ingredientesDisponibles={ingredientesDisponibles}
+        ingredientesPlato={plato ? ingredientesPlato.filter((ip) => ip.idPlato === plato.id) : []}
         onGuardado={() => setEditando(null)}
         onCancelar={() => setEditando(null)}
       />

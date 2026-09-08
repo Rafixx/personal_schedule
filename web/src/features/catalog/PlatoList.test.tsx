@@ -22,7 +22,7 @@ const platos: Plato[] = [
 
 describe('PlatoList', () => {
   it('muestra cada plato con su estado activo/inactivo', () => {
-    render(<PlatoList platos={platos} />, { wrapper })
+    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
     const filaGazpacho = screen.getByText('Gazpacho').closest('li')
     const filaCocido = screen.getByText('Cocido').closest('li')
     if (!filaGazpacho || !filaCocido) throw new Error('no se encontraron las filas')
@@ -31,7 +31,7 @@ describe('PlatoList', () => {
   })
 
   it('abre el formulario precargado al pulsar "Editar"', async () => {
-    render(<PlatoList platos={platos} />, { wrapper })
+    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
     const fila = screen.getByText('Gazpacho').closest('li')
     if (!fila) throw new Error('no se encontró la fila')
     await userEvent.click(within(fila).getByRole('button', { name: /editar/i }))
@@ -47,7 +47,7 @@ describe('PlatoList', () => {
       })
     )
     const confirmSpy = vi.spyOn(window, 'confirm')
-    render(<PlatoList platos={platos} />, { wrapper })
+    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
     const fila = screen.getByText('Gazpacho').closest('li')
     if (!fila) throw new Error('no se encontró la fila')
     await userEvent.click(within(fila).getByRole('button', { name: /desactivar/i }))
@@ -64,7 +64,7 @@ describe('PlatoList', () => {
         return HttpResponse.json({ ok: true, result: { id_plato: 2 } })
       })
     )
-    render(<PlatoList platos={platos} />, { wrapper })
+    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
     const fila = screen.getByText('Cocido').closest('li')
     if (!fila) throw new Error('no se encontró la fila')
     await userEvent.click(within(fila).getByRole('button', { name: /reactivar/i }))
@@ -74,5 +74,35 @@ describe('PlatoList', () => {
       token: 'test-token',
       payload: { id_plato: 2, nombre: 'Cocido', temporada: 'INVIERNO', etiquetas: '', notas: '', activo: true }
     })
+  })
+
+  it('pasa los ingredientes disponibles y las líneas del plato al abrir su formulario', async () => {
+    render(
+      <PlatoList
+        platos={platos}
+        ingredientesDisponibles={[{ id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }]}
+        ingredientesPlato={[{ id: 1, idPlato: 1, idIngrediente: 1, cantidad: 500, unidad: 'g' }]}
+      />,
+      { wrapper }
+    )
+    const fila = screen.getByText('Gazpacho').closest('li')
+    if (!fila) throw new Error('no se encontró la fila')
+    await userEvent.click(within(fila).getByRole('button', { name: /editar/i }))
+    expect(screen.getByDisplayValue('500')).toBeInTheDocument()
+  })
+
+  it('no incluye líneas de otros platos al abrir el formulario', async () => {
+    render(
+      <PlatoList
+        platos={platos}
+        ingredientesDisponibles={[{ id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }]}
+        ingredientesPlato={[{ id: 1, idPlato: 999, idIngrediente: 1, cantidad: 500, unidad: 'g' }]}
+      />,
+      { wrapper }
+    )
+    const fila = screen.getByText('Gazpacho').closest('li')
+    if (!fila) throw new Error('no se encontró la fila')
+    await userEvent.click(within(fila).getByRole('button', { name: /editar/i }))
+    expect(screen.getByText('Ningún ingrediente añadido.')).toBeInTheDocument()
   })
 })

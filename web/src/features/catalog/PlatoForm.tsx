@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Plato, Temporada } from '../../domain/types'
-import { usePlatoUpsert } from '../../data/queries'
+import type { Ingrediente, IngredientePlato, Plato, Temporada } from '../../domain/types'
+import { usePlatoIngredientesReplace, usePlatoUpsert } from '../../data/queries'
 import { platoFormSchema, type PlatoFormValues } from './schemas'
+import { PlatoIngredientesEditor, type LineaEditor } from './PlatoIngredientesEditor'
 
 export interface PlatoFormProps {
   plato?: Plato
+  ingredientesDisponibles: Ingrediente[]
+  ingredientesPlato: IngredientePlato[]
   onGuardado: () => void
   onCancelar: () => void
 }
@@ -33,8 +37,18 @@ function textoAEtiquetas(texto: string): string[] {
     .filter((t) => t.length > 0)
 }
 
-export function PlatoForm({ plato, onGuardado, onCancelar }: PlatoFormProps) {
+export function PlatoForm({
+  plato,
+  ingredientesDisponibles,
+  ingredientesPlato,
+  onGuardado,
+  onCancelar
+}: PlatoFormProps) {
   const platoUpsert = usePlatoUpsert()
+  const platoIngredientesReplace = usePlatoIngredientesReplace()
+  const [lineas, setLineas] = useState<LineaEditor[]>(
+    ingredientesPlato.map((ip) => ({ idIngrediente: ip.idIngrediente, cantidad: ip.cantidad, unidad: ip.unidad }))
+  )
   const {
     register,
     handleSubmit,
@@ -63,7 +77,12 @@ export function PlatoForm({ plato, onGuardado, onCancelar }: PlatoFormProps) {
         notas: valores.notas,
         activo: valores.activo
       },
-      { onSuccess: onGuardado }
+      {
+        onSuccess: (resultado) => {
+          const idPlato = plato?.id ?? resultado.id_plato
+          platoIngredientesReplace.mutate({ idPlato, ingredientes: lineas }, { onSuccess: onGuardado })
+        }
+      }
     )
   }
 
@@ -117,7 +136,14 @@ export function PlatoForm({ plato, onGuardado, onCancelar }: PlatoFormProps) {
         </label>
         <textarea id="plato-notas" {...register('notas')} rows={2} className={CAMPO} />
       </div>
-      {platoUpsert.isError && <p className="text-sm text-red-600">No se pudo guardar. Inténtalo de nuevo.</p>}
+      <PlatoIngredientesEditor
+        ingredientesDisponibles={ingredientesDisponibles}
+        lineas={lineas}
+        onCambiar={setLineas}
+      />
+      {(platoUpsert.isError || platoIngredientesReplace.isError) && (
+        <p className="text-sm text-red-600">No se pudo guardar. Inténtalo de nuevo.</p>
+      )}
       <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"
@@ -128,10 +154,10 @@ export function PlatoForm({ plato, onGuardado, onCancelar }: PlatoFormProps) {
         </button>
         <button
           type="submit"
-          disabled={platoUpsert.isPending}
+          disabled={platoUpsert.isPending || platoIngredientesReplace.isPending}
           className="rounded-full bg-amber-500 px-4.5 py-2 text-sm font-semibold text-neutral-900 disabled:opacity-50"
         >
-          {platoUpsert.isPending ? 'Guardando…' : 'Guardar'}
+          {platoUpsert.isPending || platoIngredientesReplace.isPending ? 'Guardando…' : 'Guardar'}
         </button>
       </div>
     </form>
