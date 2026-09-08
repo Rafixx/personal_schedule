@@ -346,3 +346,59 @@ persistencia de "ya comprado" tras refrescar, checklists independientes entre
 
 Pendiente (plan posterior): catálogo (CRUD de platos/ingredientes/reglas),
 Recetario interactivo, navegación real de mes en la vista Mes del planificador.
+
+## Catálogo — CRUD de platos, ingredientes y reglas (diseño)
+
+La API de Apps Script ya soporta todo esto desde el plan original (`plato.upsert`,
+`plato.delete`, `ingrediente.upsert`, `ingrediente.delete`,
+`platoIngredientes.replace`, `regla.upsert`, `regla.delete` — verificado en
+`apps-script/Codigo.gs`). Este plan es solo frontend: hooks de mutación +
+formularios. Primer uso real de `react-hook-form` + `@hookform/resolvers` + `zod`
+para validación de formularios (instalados desde el scaffolding original, nunca
+usados hasta ahora).
+
+**Navegación:** tercera ruta `/catalogo` → `CatalogPage`, con pestañas internas
+"Platos"/"Ingredientes"/"Reglas" (mismo patrón que el planificador ya usa para
+alternar Semana/Mes — pestaña interna, no sub-rutas). `NavBar` gana un tercer
+enlace "Catálogo".
+
+**Borrado — respeta la asimetría real de la API:**
+- Platos: `plato.delete` es borrado lógico (pone `activo=false`, la fila sigue
+  en la hoja) → en la UI es "Desactivar"/"Reactivar", reversible, sin
+  confirmación destructiva.
+- Ingredientes y Reglas: `ingrediente.delete`/`regla.delete` son borrado físico
+  real, sin deshacer → llevan un diálogo de confirmación explícito. Si un
+  ingrediente borrado seguía referenciado por algún `ingredientesPlatos`, la
+  API no lo impide, pero `calcularCompra` (`domain/compra.ts`) ya ignora en
+  silencio las referencias que no resuelven — no rompe nada, solo desaparece
+  de la lista de la compra. No se comprueba de antemano en qué platos se usa
+  antes de borrar (mejora posible para más adelante, no bloqueante ahora).
+
+**Sin actualización optimista aquí** (a diferencia de las mutaciones del plan
+semanal): editar el catálogo es una acción deliberada vía botón "Guardar", no
+un toque frecuente que necesite sentirse instantáneo — invalidar `['catalogo']`
+al terminar y mostrar un estado de guardando normal es suficiente y más simple.
+
+**`data/queries.ts`** gana 7 hooks nuevos, todos con
+`onSuccess: () => queryClient.invalidateQueries({queryKey:['catalogo']})`:
+- `usePlatoUpsert()` → POST `plato.upsert`
+- `usePlatoDelete()` → POST `plato.delete`
+- `useIngredienteUpsert()` → POST `ingrediente.upsert`
+- `useIngredienteDelete()` → POST `ingrediente.delete`
+- `usePlatoIngredientesReplace()` → POST `platoIngredientes.replace`
+  (payload `{id_plato, ingredientes: [{id_ingrediente, cantidad, unidad}, ...]}`)
+- `useReglaUpsert()` → POST `regla.upsert`
+- `useReglaDelete()` → POST `regla.delete`
+
+**`features/catalog/`:**
+- `CatalogPage.tsx` — pestañas Platos/Ingredientes/Reglas.
+- `PlatoList.tsx` + `PlatoForm.tsx` — el formulario de plato incluye un editor
+  de ingredientes anidado (añadir/quitar líneas de `{ingrediente, cantidad,
+  unidad}`). Al guardar dispara `usePlatoUpsert` y, después,
+  `usePlatoIngredientesReplace` con la lista completa de líneas del editor tal
+  cual esté en ese momento (siempre, sin detectar si cambió — `platoIngredientes.replace`
+  ya es un reemplazo completo idempotente, así que no hace falta esa lógica).
+- `IngredienteList.tsx` + `IngredienteForm.tsx` — formulario plano (nombre,
+  proveedor, unidad base, temporadas, macros opcionales).
+- `ReglaList.tsx` + `ReglaForm.tsx` — formulario plano (etiqueta, tipo, valor,
+  activa).
