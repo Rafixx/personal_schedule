@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { z } from 'zod'
 import type { Regla } from '../../domain/types'
 import { useReglaUpsert } from '../../data/queries'
-import { reglaFormSchema, type ReglaFormValues } from './schemas'
+import { normalizarEtiqueta, reglaFormSchema, type ReglaFormValues } from './schemas'
 
 export interface ReglaFormProps {
   regla?: Regla
@@ -28,7 +28,10 @@ export function ReglaForm({ regla, onGuardado, onCancelar }: ReglaFormProps) {
   })
 
   function onSubmit(valores: ReglaFormValues) {
-    reglaUpsert.mutate({ id: regla?.id, ...valores }, { onSuccess: onGuardado })
+    reglaUpsert.mutate(
+      { id: regla?.id, ...valores, etiqueta: normalizarEtiqueta(valores.etiqueta) },
+      { onSuccess: onGuardado }
+    )
   }
 
   return (

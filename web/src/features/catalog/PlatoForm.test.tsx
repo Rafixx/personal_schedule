@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
@@ -150,5 +150,98 @@ describe('PlatoForm', () => {
       { wrapper }
     )
     expect(screen.getByDisplayValue('500')).toBeInTheDocument()
+  })
+
+  it('si falla el guardado de ingredientes, reintentar reutiliza el id creado en vez de duplicar el plato', async () => {
+    const cuerposUpsert: Array<{ action: string; payload: unknown }> = []
+    let fallarReplace = true
+    server.use(
+      http.post(API_URL, async ({ request }) => {
+        const cuerpo = (await request.json()) as { action: string; payload: unknown }
+        if (cuerpo.action === 'plato.upsert') {
+          cuerposUpsert.push(cuerpo)
+          return HttpResponse.json({ ok: true, result: { id_plato: 21 } })
+        }
+        if (fallarReplace) {
+          fallarReplace = false
+          return HttpResponse.json({ ok: false, error: 'fallo temporal' }, { status: 500 })
+        }
+        return HttpResponse.json({ ok: true, result: { id_plato: 21, count: 1 } })
+      })
+    )
+    render(
+      <PlatoForm
+        ingredientesDisponibles={[
+          { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
+        ]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+      { wrapper }
+    )
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Lentejas')
+    await userEvent.click(screen.getByRole('button', { name: /añadir ingrediente/i }))
+    await userEvent.click(screen.getByRole('button', { name: /^guardar$/i }))
+    await waitFor(() => expect(screen.getByText('No se pudo guardar. Inténtalo de nuevo.')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: /^guardar$/i }))
+    await waitFor(() => expect(cuerposUpsert).toHaveLength(2))
+    expect(cuerposUpsert[0].payload).not.toHaveProperty('id_plato')
+    expect(cuerposUpsert[1].payload).toMatchObject({ id_plato: 21 })
+  })
+
+  it('no llama a platoIngredientes.replace si las líneas no cambiaron al editar', async () => {
+    let seLlamoAReplace = false
+    server.use(
+      http.post(API_URL, async ({ request }) => {
+        const cuerpo = (await request.json()) as { action: string }
+        if (cuerpo.action === 'platoIngredientes.replace') seLlamoAReplace = true
+        return HttpResponse.json({ ok: true, result: { id_plato: 3 } })
+      })
+    )
+    const onGuardado = vi.fn()
+    render(
+      <PlatoForm
+        plato={{ id: 3, nombre: 'Gazpacho', temporadas: ['VERANO'], etiquetas: [], notas: '', activo: true }}
+        ingredientesDisponibles={[
+          { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
+        ]}
+        ingredientesPlato={[{ id: 1, idPlato: 3, idIngrediente: 1, cantidad: 500, unidad: 'g' }]}
+        onGuardado={onGuardado}
+        onCancelar={vi.fn()}
+      />,
+      { wrapper }
+    )
+    await userEvent.clear(screen.getByLabelText('Nombre'))
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Gazpacho andaluz')
+    await userEvent.click(screen.getByRole('button', { name: /^guardar$/i }))
+    await waitFor(() => expect(onGuardado).toHaveBeenCalledOnce())
+    expect(seLlamoAReplace).toBe(false)
+  })
+
+  it('no guarda si una línea de ingrediente tiene cantidad 0', async () => {
+    server.use(http.post(API_URL, () => HttpResponse.json({ ok: true, result: { id_plato: 30 } })))
+    render(
+      <PlatoForm
+        ingredientesDisponibles={[
+          { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
+        ]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+      { wrapper }
+    )
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Lentejas')
+    await userEvent.click(screen.getByRole('button', { name: /añadir ingrediente/i }))
+    const campoCantidad = screen.getByDisplayValue('1')
+    fireEvent.change(campoCantidad, { target: { value: '0' } })
+    await userEvent.click(screen.getByRole('button', { name: /^guardar$/i }))
+    expect(
+      await screen.findByText(
+        'Revisa los ingredientes: la cantidad debe ser mayor que 0 y la unidad no puede estar vacía.'
+      )
+    ).toBeInTheDocument()
   })
 })

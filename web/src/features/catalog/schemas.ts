@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+export function normalizarEtiqueta(texto: string): string {
+  return texto
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
 export const reglaFormSchema = z.object({
   etiqueta: z.string().trim().min(1, 'La etiqueta es obligatoria'),
   tipo: z.enum(['MAX_SEMANA', 'MIN_SEMANA', 'NO_CONSECUTIVO']),

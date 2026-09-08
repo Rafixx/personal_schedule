@@ -77,4 +77,30 @@ describe('PlatoIngredientesEditor', () => {
     await userEvent.click(filas[0])
     expect(onCambiar).toHaveBeenCalledWith([{ idIngrediente: 2, cantidad: 1, unidad: 'ud' }])
   })
+
+  it('muestra una opción de "no encontrado" si el ingrediente de la línea ya no está disponible', () => {
+    render(
+      <PlatoIngredientesEditor
+        ingredientesDisponibles={ingredientesDisponibles}
+        lineas={[{ idIngrediente: 99, cantidad: 1, unidad: 'ud' }]}
+        onCambiar={vi.fn()}
+      />
+    )
+    expect(screen.getByText('Ingrediente #99 — no encontrado')).toBeInTheDocument()
+  })
+
+  it('recorta espacios de la unidad al perder el foco', () => {
+    const onCambiar = vi.fn()
+    render(
+      <PlatoIngredientesEditor
+        ingredientesDisponibles={ingredientesDisponibles}
+        lineas={[{ idIngrediente: 1, cantidad: 1, unidad: 'g' }]}
+        onCambiar={onCambiar}
+      />
+    )
+    const campoUnidad = screen.getByDisplayValue('g')
+    fireEvent.change(campoUnidad, { target: { value: ' g ' } })
+    fireEvent.blur(campoUnidad)
+    expect(onCambiar).toHaveBeenLastCalledWith([{ idIngrediente: 1, cantidad: 1, unidad: 'g' }])
+  })
 })

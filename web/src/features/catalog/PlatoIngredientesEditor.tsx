@@ -47,41 +47,50 @@ export function PlatoIngredientesEditor({
         </button>
       </div>
       {lineas.length === 0 && <p className="text-sm text-neutral-400">Ningún ingrediente añadido.</p>}
-      {lineas.map((linea, indice) => (
-        <div key={indice} className="flex items-center gap-2">
-          <select
-            value={linea.idIngrediente}
-            onChange={(e) => actualizarLinea(indice, { idIngrediente: Number(e.target.value) })}
-            className={`flex-1 ${CAMPO}`}
-          >
-            {ingredientesDisponibles.map((ing) => (
-              <option key={ing.id} value={ing.id}>
-                {ing.nombre}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            value={linea.cantidad}
-            onChange={(e) => actualizarLinea(indice, { cantidad: Number(e.target.value) })}
-            className={`w-20 ${CAMPO}`}
-          />
-          <input
-            type="text"
-            value={linea.unidad}
-            onChange={(e) => actualizarLinea(indice, { unidad: e.target.value })}
-            className={`w-20 ${CAMPO}`}
-          />
-          <button
-            type="button"
-            onClick={() => quitarLinea(indice)}
-            aria-label="Quitar ingrediente"
-            className="grid h-8 w-8 place-items-center rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-700"
-          >
-            ×
-          </button>
-        </div>
-      ))}
+      {lineas.map((linea, indice) => {
+        const noEncontrado = !ingredientesDisponibles.some((ing) => ing.id === linea.idIngrediente)
+        return (
+          <div key={indice} className="flex items-center gap-2">
+            <select
+              value={linea.idIngrediente}
+              onChange={(e) => actualizarLinea(indice, { idIngrediente: Number(e.target.value) })}
+              className={`flex-1 ${CAMPO}`}
+            >
+              {noEncontrado && (
+                <option value={linea.idIngrediente} disabled>
+                  Ingrediente #{linea.idIngrediente} — no encontrado
+                </option>
+              )}
+              {ingredientesDisponibles.map((ing) => (
+                <option key={ing.id} value={ing.id}>
+                  {ing.nombre}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={linea.cantidad}
+              onChange={(e) => actualizarLinea(indice, { cantidad: Number(e.target.value) })}
+              className={`w-20 ${CAMPO}`}
+            />
+            <input
+              type="text"
+              value={linea.unidad}
+              onChange={(e) => actualizarLinea(indice, { unidad: e.target.value })}
+              onBlur={(e) => actualizarLinea(indice, { unidad: e.target.value.trim() })}
+              className={`w-20 ${CAMPO}`}
+            />
+            <button
+              type="button"
+              onClick={() => quitarLinea(indice)}
+              aria-label="Quitar ingrediente"
+              className="grid h-8 w-8 place-items-center rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-700"
+            >
+              ×
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }

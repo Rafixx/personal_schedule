@@ -3,7 +3,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Ingrediente, IngredientePlato, Plato, Temporada } from '../../domain/types'
 import { usePlatoIngredientesReplace, usePlatoUpsert } from '../../data/queries'
-import { platoFormSchema, type PlatoFormValues } from './schemas'
+import { normalizarEtiqueta, platoFormSchema, type PlatoFormValues } from './schemas'
 import { PlatoIngredientesEditor, type LineaEditor } from './PlatoIngredientesEditor'
 
 export interface PlatoFormProps {
@@ -33,8 +33,12 @@ function etiquetasATexto(etiquetas: string[]): string {
 function textoAEtiquetas(texto: string): string[] {
   return texto
     .split(',')
-    .map((t) => t.trim().toLowerCase())
+    .map((t) => normalizarEtiqueta(t))
     .filter((t) => t.length > 0)
+}
+
+function lineasIguales(a: LineaEditor[], b: LineaEditor[]): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
 }
 
 export function PlatoForm({
@@ -46,9 +50,12 @@ export function PlatoForm({
 }: PlatoFormProps) {
   const platoUpsert = usePlatoUpsert()
   const platoIngredientesReplace = usePlatoIngredientesReplace()
-  const [lineas, setLineas] = useState<LineaEditor[]>(
+  const [lineasIniciales] = useState<LineaEditor[]>(
     ingredientesPlato.map((ip) => ({ idIngrediente: ip.idIngrediente, cantidad: ip.cantidad, unidad: ip.unidad }))
   )
+  const [lineas, setLineas] = useState<LineaEditor[]>(lineasIniciales)
+  const [idCreado, setIdCreado] = useState<number | undefined>(undefined)
+  const [errorLineas, setErrorLineas] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
@@ -67,23 +74,34 @@ export function PlatoForm({
       : { nombre: '', temporadas: ['TODAS'], etiquetas: '', notas: '', activo: true }
   })
 
-  function onSubmit(valores: PlatoFormValues) {
-    platoUpsert.mutate(
-      {
-        id: plato?.id,
+  async function onSubmit(valores: PlatoFormValues) {
+    const lineaInvalida = lineas.some((l) => l.cantidad <= 0 || l.unidad.trim().length === 0)
+    if (lineaInvalida) {
+      setErrorLineas('Revisa los ingredientes: la cantidad debe ser mayor que 0 y la unidad no puede estar vacía.')
+      return
+    }
+    setErrorLineas(null)
+
+    const idExistente = plato?.id ?? idCreado
+    try {
+      const resultado = await platoUpsert.mutateAsync({
+        id: idExistente,
         nombre: valores.nombre,
         temporadas: valores.temporadas,
         etiquetas: textoAEtiquetas(valores.etiquetas),
         notas: valores.notas,
         activo: valores.activo
-      },
-      {
-        onSuccess: (resultado) => {
-          const idPlato = plato?.id ?? resultado.id_plato
-          platoIngredientesReplace.mutate({ idPlato, ingredientes: lineas }, { onSuccess: onGuardado })
-        }
+      })
+      const idPlato = idExistente ?? resultado.id_plato
+      if (!idExistente) setIdCreado(idPlato)
+
+      if (!lineasIguales(lineas, lineasIniciales)) {
+        await platoIngredientesReplace.mutateAsync({ idPlato, ingredientes: lineas })
       }
-    )
+      onGuardado()
+    } catch {
+      // el error ya se refleja vía platoUpsert.isError / platoIngredientesReplace.isError
+    }
   }
 
   return (
@@ -141,6 +159,7 @@ export function PlatoForm({
         lineas={lineas}
         onCambiar={setLineas}
       />
+      {errorLineas && <p className="text-sm text-red-600">{errorLineas}</p>}
       {(platoUpsert.isError || platoIngredientesReplace.isError) && (
         <p className="text-sm text-red-600">No se pudo guardar. Inténtalo de nuevo.</p>
       )}

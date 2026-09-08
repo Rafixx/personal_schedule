@@ -76,4 +76,24 @@ describe('ReglaForm', () => {
     await userEvent.click(screen.getByRole('button', { name: /cancelar/i }))
     expect(onCancelar).toHaveBeenCalledOnce()
   })
+
+  it('normaliza la etiqueta a minúsculas y sin acentos al guardar', async () => {
+    let payloadRecibido: unknown = null
+    server.use(
+      http.post(API_URL, async ({ request }) => {
+        payloadRecibido = await request.json()
+        return HttpResponse.json({ ok: true, result: { id: 6 } })
+      })
+    )
+    render(<ReglaForm onGuardado={vi.fn()} onCancelar={vi.fn()} />, { wrapper })
+    await userEvent.type(screen.getByLabelText('Etiqueta'), 'Pastél')
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }))
+    await waitFor(() =>
+      expect(payloadRecibido).toEqual({
+        action: 'regla.upsert',
+        token: 'test-token',
+        payload: { etiqueta: 'pastel', tipo: 'MAX_SEMANA', valor: 1, activa: true }
+      })
+    )
+  })
 })
