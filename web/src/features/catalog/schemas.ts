@@ -28,3 +28,15 @@ export const ingredienteFormSchema = z.object({
 })
 
 export type IngredienteFormValues = z.infer<typeof ingredienteFormSchema>
+
+export const platoFormSchema = z.object({
+  nombre: z.string().trim().min(1, 'El nombre es obligatorio'),
+  temporadas: z
+    .array(z.enum(['TODAS', 'PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO']))
+    .min(1, 'Elige al menos una temporada'),
+  etiquetas: z.string(),
+  notas: z.string(),
+  activo: z.boolean()
+})
+
+export type PlatoFormValues = z.infer<typeof platoFormSchema>
