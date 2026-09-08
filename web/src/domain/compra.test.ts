@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { calcularCompra } from './compra'
+import { calcularCompra, formatoTextoCompra } from './compra'
+import type { ListaCompra } from './compra'
 import type { Catalogo, PlanEntry } from './types'
 
 const catalogo: Catalogo = {
@@ -53,5 +54,30 @@ describe('calcularCompra', () => {
     const plan = [entrada('2026-09-07', 1), entrada('2026-09-08', 2)]
     const resultado = calcularCompra(plan, catalogo)
     expect(resultado.map((r) => r.proveedor)).toEqual(['Frutería', 'Mercadona'])
+  })
+})
+
+describe('formatoTextoCompra', () => {
+  it('agrupa por proveedor en mayúsculas con una línea por ingrediente', () => {
+    const listas: ListaCompra[] = [
+      {
+        proveedor: 'Mercadona',
+        lineas: [
+          { idIngrediente: 1, nombre: 'Tomate', proveedor: 'Mercadona', cantidad: 500, unidad: 'g' },
+          { idIngrediente: 2, nombre: 'Pasta', proveedor: 'Mercadona', cantidad: 2, unidad: 'paquete' }
+        ]
+      },
+      {
+        proveedor: 'Carnicería',
+        lineas: [{ idIngrediente: 3, nombre: 'Pollo', proveedor: 'Carnicería', cantidad: 1, unidad: 'kg' }]
+      }
+    ]
+    expect(formatoTextoCompra(listas)).toBe(
+      'MERCADONA\n- Tomate: 500 g\n- Pasta: 2 paquete\n\nCARNICERÍA\n- Pollo: 1 kg'
+    )
+  })
+
+  it('devuelve cadena vacía si no hay listas', () => {
+    expect(formatoTextoCompra([])).toBe('')
   })
 })

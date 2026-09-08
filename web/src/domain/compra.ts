@@ -59,3 +59,12 @@ export function calcularCompra(plan: PlanEntry[], catalogo: Catalogo): ListaComp
       lineas: lineas.sort((a, b) => a.nombre.localeCompare(b.nombre))
     }))
 }
+
+export function formatoTextoCompra(listas: ListaCompra[]): string {
+  return listas
+    .map((lista) => {
+      const lineas = lista.lineas.map((l) => `- ${l.nombre}: ${l.cantidad} ${l.unidad}`).join('\n')
+      return `${lista.proveedor.toUpperCase()}\n${lineas}`
+    })
+    .join('\n\n')
+}
