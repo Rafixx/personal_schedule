@@ -231,11 +231,9 @@ de TanStack Query) contra este contrato sin más cambios en Apps Script.
   `useMovePlanEntry` queda sin optimismo — no lo usa ninguna UI todavía (reservado para el
   plan de arrastrar-y-soltar).
 
-Pendiente: las mutaciones de `plato`/`ingrediente`/`regla` para la página de
-catálogo, y la lista de la compra (`compra.ts` ya existe y está testeado,
-falta la UI). El planificador (calendario, recetario, selector, avisos de
-reglas, vista de mes, persistencia offline) ya está construido — ver la
-siguiente sección.
+Pendiente: Recetario interactivo, navegación real de mes en la vista Mes del
+planificador. El catálogo (CRUD de platos/ingredientes/reglas) y la lista de
+la compra ya están construidos — ver las secciones siguientes.
 
 ## Resultado de la verificación del segundo hueco (orden)
 
@@ -357,7 +355,7 @@ rango + botón "Copiar", re-vestidos con el mismo lenguaje visual (pastillas
 Pendiente (plan posterior): catálogo (CRUD de platos/ingredientes/reglas),
 Recetario interactivo, navegación real de mes en la vista Mes del planificador.
 
-## Catálogo — CRUD de platos, ingredientes y reglas (diseño)
+## Catálogo — CRUD de platos, ingredientes y reglas (implementado)
 
 La API de Apps Script ya soporta todo esto desde el plan original (`plato.upsert`,
 `plato.delete`, `ingrediente.upsert`, `ingrediente.delete`,
@@ -415,3 +413,12 @@ al terminar y mostrar un estado de guardando normal es suficiente y más simple.
   proveedor, unidad base, temporadas, macros opcionales).
 - `ReglaList.tsx` + `ReglaForm.tsx` — formulario plano (etiqueta, tipo, valor,
   activa).
+
+**Implementado:** todo lo descrito arriba, construido tal cual. Tercera ruta
+`/catalogo` en `App.tsx`; `shared/AppBar.tsx` gana el enlace "Catálogo".
+Verificado manualmente (solo lectura, sin mutar datos reales) contra la API
+real: las tres pestañas cargan datos reales del catálogo, y el formulario de
+un plato existente (Gazpacho) precarga correctamente sus 4 ingredientes
+reales en el editor anidado. La creación/edición/borrado reales (que sí
+mutan la hoja) quedan pendientes de que el usuario las pruebe en su propio
+dispositivo, siguiendo la lista de comprobación del plan.
