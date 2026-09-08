@@ -288,3 +288,44 @@ aditiva sobre estos mismos componentes):
 
 Pendiente (plan posterior): arrastrar-y-soltar sobre estos mismos
 componentes.
+
+## Lista de la compra (diseño)
+
+Primer uso real de `react-router-dom` (dependencia instalada desde el scaffolding
+original pero nunca usada hasta ahora) — necesario porque, a partir de esta
+funcionalidad, la app deja de tener una única pantalla.
+
+**Navegación:** `main.tsx` monta `BrowserRouter`; `App.tsx` define `<Routes>` con
+`/` → `PlannerPage` y `/compra` → `ShoppingListPage`. Una barra de navegación
+mínima y persistente (fuera de ambas páginas) enlaza "Planificador"/"Compra" —
+separada del `Toolbar` del planificador, que sigue ocupándose solo de la
+navegación por semana dentro de esa página.
+
+**`features/shopping/`:**
+- `useShoppingList(rango: 'actual' | 'siguiente')` — calcula `desde`/`hasta`
+  siempre anclado a hoy (no al estado de navegación del planificador, son
+  páginas independientes): `lunesDe(hoy)` + `fechasSemana` para "actual", o
+  `addWeeks(lunesDe(hoy), 1)` + `fechasSemana` para "siguiente"; llama a
+  `usePlan(desde,hasta)` +
+  `useCatalogo()` y pasa el resultado a `calcularCompra` (`domain/compra.ts`,
+  sin cambios). Devuelve `{listas: ListaCompra[], cargando, comprado(idIngrediente,
+  unidad), marcarComprado(idIngrediente, unidad, valor)}`.
+- Estado de "ya comprado" en `localStorage`, clave `compra:${desde}:${hasta}` →
+  `{ "idIngrediente|unidad": true }`. Cada semana (actual/siguiente) tiene su
+  propio checklist independiente — es estado del momento, no dato del dominio,
+  no se escribe en la hoja.
+- `ShoppingListPage.tsx` — orquesta el selector de rango, el hook y el layout;
+  incluye el botón "Copiar" que serializa `listas` como texto plano agrupado
+  por proveedor (`PROVEEDOR\n- Nombre: cantidad unidad\n...`) vía
+  `navigator.clipboard.writeText`.
+- `ProviderGroup.tsx` — una sección por proveedor con sus líneas y checkboxes,
+  siguiendo el mismo patrón de descomposición que los componentes del
+  planificador.
+
+**Tests:** `useShoppingList.test.tsx` (MSW, cálculo del rango actual/siguiente);
+test de integración de `ShoppingListPage` (navegar a `/compra`, ver proveedores,
+marcar comprado, cambiar de semana, copiar). `navigator.clipboard` no existe en
+jsdom por defecto — se añade un mock mínimo a `test/setup.ts`.
+
+Pendiente (plan posterior): catálogo (CRUD de platos/ingredientes/reglas),
+Recetario interactivo, navegación real de mes en la vista Mes del planificador.
