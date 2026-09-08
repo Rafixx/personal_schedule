@@ -8,3 +8,23 @@ export const reglaFormSchema = z.object({
 })
 
 export type ReglaFormValues = z.infer<typeof reglaFormSchema>
+
+const numeroFormOpcional = z.preprocess((valor) => {
+  if (valor === '' || valor === null || valor === undefined) return undefined
+  return valor
+}, z.coerce.number().optional())
+
+export const ingredienteFormSchema = z.object({
+  nombre: z.string().trim().min(1, 'El nombre es obligatorio'),
+  proveedor: z.string().trim().min(1, 'El proveedor es obligatorio'),
+  unidadBase: z.string().trim().min(1, 'La unidad es obligatoria'),
+  temporadas: z
+    .array(z.enum(['TODAS', 'PRIMAVERA', 'VERANO', 'OTOÑO', 'INVIERNO']))
+    .min(1, 'Elige al menos una temporada'),
+  kcal100: numeroFormOpcional,
+  prot100: numeroFormOpcional,
+  carb100: numeroFormOpcional,
+  grasa100: numeroFormOpcional
+})
+
+export type IngredienteFormValues = z.infer<typeof ingredienteFormSchema>
