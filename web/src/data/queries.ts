@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { Catalogo, Orden, PlanEntry, Turno } from '../domain/types'
 import { sheetsClient } from './client'
 import type { FilaInvalida } from './schemas'
@@ -81,6 +81,15 @@ export function usePlan(desde: string, hasta: string) {
   return useQuery({ queryKey: ['plan', desde, hasta], queryFn: () => fetchPlan(desde, hasta) })
 }
 
+async function instantaneaPlan(queryClient: QueryClient) {
+  await queryClient.cancelQueries({ queryKey: ['plan'] })
+  return queryClient.getQueriesData<PlanEntry[]>({ queryKey: ['plan'] })
+}
+
+function revertirPlan(queryClient: QueryClient, previas: Awaited<ReturnType<typeof instantaneaPlan>>) {
+  previas.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey, data))
+}
+
 interface NuevaAsignacion {
   fecha: string
   turno: Turno
@@ -101,7 +110,31 @@ export function useSetPlanEntry() {
         notas: entrada.notas ?? ''
       }),
     retry: 2,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
+    onMutate: async (entrada) => {
+      const previas = await instantaneaPlan(queryClient)
+      queryClient.setQueriesData<PlanEntry[]>({ queryKey: ['plan'] }, (anteriores) => {
+        if (!anteriores) return anteriores
+        const sinEsaAsignacion = anteriores.filter(
+          (e) => !(e.fecha === entrada.fecha && e.turno === entrada.turno && e.orden === entrada.orden)
+        )
+        return [
+          ...sinEsaAsignacion,
+          {
+            id: -Date.now(),
+            fecha: entrada.fecha,
+            turno: entrada.turno,
+            orden: entrada.orden,
+            idPlato: entrada.idPlato,
+            notas: entrada.notas ?? ''
+          }
+        ]
+      })
+      return { previas }
+    },
+    onError: (_err, _entrada, context) => {
+      if (context) revertirPlan(queryClient, context.previas)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
   })
 }
 
@@ -124,6 +157,16 @@ export function useDeletePlanEntry() {
   return useMutation({
     mutationFn: (args: ExtremoPlan) => sheetsClient.apiPost('plan.delete', args),
     retry: 2,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
+    onMutate: async (args) => {
+      const previas = await instantaneaPlan(queryClient)
+      queryClient.setQueriesData<PlanEntry[]>({ queryKey: ['plan'] }, (anteriores) =>
+        anteriores?.filter((e) => !(e.fecha === args.fecha && e.turno === args.turno && e.orden === args.orden))
+      )
+      return { previas }
+    },
+    onError: (_err, _args, context) => {
+      if (context) revertirPlan(queryClient, context.previas)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
   })
 }

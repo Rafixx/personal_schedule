@@ -224,7 +224,12 @@ de TanStack Query) contra este contrato sin más cambios en Apps Script.
 - `sheetsClient.ts` — `createSheetsClient({baseUrl, token})`, POST siempre `text/plain`.
 - `client.ts` — instancia única leyendo `VITE_API_URL`/`VITE_API_TOKEN` (ver `web/.env.example`).
 - `queries.ts` — `useCatalogo()` (devuelve también `filasInvalidas`), `usePlan(desde, hasta)`,
-  `useSetPlanEntry()`, `useMovePlanEntry()`, `useDeletePlanEntry()`.
+  `useSetPlanEntry()`, `useMovePlanEntry()`, `useDeletePlanEntry()`. `useSetPlanEntry`/
+  `useDeletePlanEntry` son optimistas: `onMutate` parchea al instante todas las queries
+  `['plan', ...]` cacheadas (semana y mes pueden estar montadas a la vez), `onError` revierte
+  la instantánea guardada y `onSettled` invalida para reconciliar con el servidor.
+  `useMovePlanEntry` queda sin optimismo — no lo usa ninguna UI todavía (reservado para el
+  plan de arrastrar-y-soltar).
 
 Pendiente: las mutaciones de `plato`/`ingrediente`/`regla` para la página de
 catálogo, y la lista de la compra (`compra.ts` ya existe y está testeado,
