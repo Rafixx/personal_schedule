@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { addWeeks } from 'date-fns'
 import type { Dispatch, SetStateAction } from 'react'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent
+} from '@dnd-kit/core'
 import type { Orden } from '../../domain/types'
 import { fechasSemanaCompleta, formatearRangoSemana, hoyIso, lunesDe } from '../../shared/semanaDates'
 import { AppBar } from '../../shared/AppBar'
@@ -13,6 +23,8 @@ import { WeekBoard } from './WeekBoard'
 import { Recetario } from './Recetario'
 import { PlatoPicker } from './PlatoPicker'
 import { MonthView } from './MonthView'
+import { DishChip } from './DishChip'
+import { resolverArrastre, type DestinoArrastre, type OrigenArrastre } from './dragDrop'
 
 const NOMBRE_HUECO: Record<Orden, string> = { 1: 'Primero', 2: 'Segundo' }
 
@@ -25,9 +37,30 @@ export interface PlannerPageProps {
 
 export function PlannerPage({ lunes, setLunes, vista, setVista }: PlannerPageProps) {
   const [picker, setPicker] = useState<{ fecha: string; orden: Orden } | null>(null)
+  const [arrastreActivo, setArrastreActivo] = useState<OrigenArrastre | null>(null)
 
   const semana = useWeekPlan(lunes)
   const mes = useMonthPlan(lunes)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  )
+
+  function onDragStart(event: DragStartEvent) {
+    setArrastreActivo((event.active.data.current as OrigenArrastre | undefined) ?? null)
+  }
+
+  function onDragEnd(event: DragEndEvent) {
+    setArrastreActivo(null)
+    const origen = event.active.data.current as OrigenArrastre | undefined
+    if (!origen) return
+    const destino = (event.over?.data.current as DestinoArrastre | undefined) ?? null
+    const accion = resolverArrastre(origen, destino)
+    if (accion.tipo === 'asignar') semana.asignarPlato(accion.fecha, accion.orden, accion.idPlato)
+    else if (accion.tipo === 'mover') semana.moverPlato(accion.origen, accion.destino)
+    else if (accion.tipo === 'quitar') semana.quitarPlato(accion.fecha, accion.orden)
+  }
 
   return (
     <div className="mx-auto max-w-[1560px] pb-7">
@@ -49,15 +82,18 @@ export function PlannerPage({ lunes, setLunes, vista, setVista }: PlannerPagePro
         semana.cargando ? (
           <p className="px-5 pt-3.5 text-center text-neutral-500">Cargando…</p>
         ) : (
-          <main className="grid grid-cols-1 gap-4 px-5 pt-3.5 lg:grid-cols-[1fr_300px]">
-            <WeekBoard
-              dias={semana.dias}
-              hoyIso={hoyIso()}
-              onAbrirPicker={(fecha, orden) => setPicker({ fecha, orden })}
-              onQuitar={(fecha, orden) => semana.quitarPlato(fecha, orden)}
-            />
-            <Recetario platos={semana.platosActivos} />
-          </main>
+          <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+            <main className="grid grid-cols-1 gap-4 px-5 pt-3.5 lg:grid-cols-[1fr_300px]">
+              <WeekBoard
+                dias={semana.dias}
+                hoyIso={hoyIso()}
+                onAbrirPicker={(fecha, orden) => setPicker({ fecha, orden })}
+                onQuitar={(fecha, orden) => semana.quitarPlato(fecha, orden)}
+              />
+              <Recetario platos={semana.platosActivos} />
+            </main>
+            <DragOverlay>{arrastreActivo && <DishChip plato={arrastreActivo.plato} />}</DragOverlay>
+          </DndContext>
         )
       ) : (
         <div className="px-5 pt-3.5">
