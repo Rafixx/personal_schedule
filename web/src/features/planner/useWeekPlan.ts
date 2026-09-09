@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import type { Orden } from '../../domain/types'
 import { aAsignaciones, construirSemana } from '../../domain/semana'
 import { evaluarSemana } from '../../domain/reglas'
@@ -5,6 +6,7 @@ import { useCatalogo, useDeletePlanEntry, useMovePlanEntry, usePlan, useSetPlanE
 import { fechasSemana } from '../../shared/semanaDates'
 
 export function useWeekPlan(lunes: Date) {
+  const queryClient = useQueryClient()
   const fechas = fechasSemana(lunes)
   const catalogo = useCatalogo()
   const plan = usePlan(fechas[0], fechas[4])
@@ -34,6 +36,11 @@ export function useWeekPlan(lunes: Date) {
     })
   }
 
+  function refrescar() {
+    queryClient.invalidateQueries({ queryKey: ['plan'] })
+    queryClient.invalidateQueries({ queryKey: ['catalogo'] })
+  }
+
   return {
     dias,
     estadosRegla,
@@ -42,9 +49,14 @@ export function useWeekPlan(lunes: Date) {
     error:
       catalogo.isError || plan.isError || setPlanEntry.isError || deletePlanEntry.isError || movePlanEntry.isError,
     guardando:
-      setPlanEntry.isPending || deletePlanEntry.isPending || movePlanEntry.isPending || plan.isFetching,
+      setPlanEntry.isPending ||
+      deletePlanEntry.isPending ||
+      movePlanEntry.isPending ||
+      plan.isFetching ||
+      catalogo.isFetching,
     asignarPlato,
     quitarPlato,
-    moverPlato
+    moverPlato,
+    refrescar
   }
 }

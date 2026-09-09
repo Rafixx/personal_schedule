@@ -73,6 +73,7 @@ export function PlannerPage({ lunes, setLunes, vista, setVista }: PlannerPagePro
           onSemanaAnterior={() => setLunes((actual) => addWeeks(actual, -1))}
           onSemanaSiguiente={() => setLunes((actual) => addWeeks(actual, 1))}
           onCambiarVista={setVista}
+          onRefrescar={semana.refrescar}
         />
       </AppBar>
 

@@ -12,6 +12,7 @@ function setup(overrides: Partial<Parameters<typeof Toolbar>[0]> = {}) {
     onSemanaAnterior: vi.fn(),
     onSemanaSiguiente: vi.fn(),
     onCambiarVista: vi.fn(),
+    onRefrescar: vi.fn(),
     ...overrides
   }
   render(<Toolbar {...props} />)
@@ -46,5 +47,11 @@ describe('Toolbar', () => {
   it('muestra "Sin conexión" cuando error es true', () => {
     setup({ error: true })
     expect(screen.getByText('Sin conexión')).toBeInTheDocument()
+  })
+
+  it('llama a onRefrescar al pulsar el indicador de sincronización', async () => {
+    const props = setup()
+    await userEvent.click(screen.getByRole('button', { name: /actualizar datos/i }))
+    expect(props.onRefrescar).toHaveBeenCalledOnce()
   })
 })

@@ -121,6 +121,40 @@ describe('useWeekPlan', () => {
     await waitFor(() => expect(result.current.dias[0].huecos[0].plato?.nombre).toBe('Pasta'), { timeout: 8000 })
   }, 10000)
 
+  it('refrescar fuerza un nuevo fetch del plan y del catálogo', async () => {
+    let peticionesPlan = 0
+    let peticionesBootstrap = 0
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        const url = new URL(request.url)
+        if (url.searchParams.get('action') === 'bootstrap') {
+          peticionesBootstrap++
+          return HttpResponse.json({
+            ok: true,
+            platos: [
+              { id_plato: 5, nombre: 'Pasta', temporada: 'TODAS', etiquetas: 'pasta', notas: '', activo: true }
+            ],
+            ingredientes: [],
+            ingredientesPlatos: [],
+            reglas: [],
+            proveedores: []
+          })
+        }
+        peticionesPlan++
+        return HttpResponse.json({ ok: true, entries: [] })
+      })
+    )
+    const { result } = renderHook(() => useWeekPlan(new Date(2026, 8, 7)), { wrapper })
+    await waitFor(() => expect(result.current.cargando).toBe(false))
+    expect(peticionesPlan).toBe(1)
+    expect(peticionesBootstrap).toBe(1)
+
+    result.current.refrescar()
+
+    await waitFor(() => expect(peticionesPlan).toBe(2))
+    await waitFor(() => expect(peticionesBootstrap).toBe(2))
+  })
+
   it('moverPlato intercambia los platos de los dos huecos al instante', async () => {
     server.use(
       http.get(API_URL, ({ request }) => {
