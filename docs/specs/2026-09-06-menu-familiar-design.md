@@ -435,9 +435,14 @@ diferir esta funcionalidad durante el plan del planificador.
 **Alcance de las tres interacciones:**
 1. Desde una tarjeta del Recetario a cualquier hueco (vacío u ocupado) →
    asigna ese plato al hueco, reemplazando lo que hubiera.
-2. De un hueco ocupado a otro hueco ocupado → intercambia los dos platos
+2. De un hueco ocupado a otro hueco distinto → mueve el plato a ese hueco
    (`plan.move`, acción ya construida y verificada en la API, sin ningún
-   consumidor en la UI hasta ahora).
+   consumidor en la UI hasta ahora). Si el hueco de destino estaba ocupado,
+   el resultado es un intercambio de los dos platos; si estaba vacío, es un
+   simple traslado. `plan.move` ya resuelve ambos casos con la misma
+   llamada (confirmado leyendo `planMove_` en `Codigo.gs`: si la posición de
+   destino no tenía fila, la de origen se borra en vez de recibir el plato
+   que había en destino), así que el frontend no necesita distinguirlos.
 3. Arrastrar un plato asignado fuera de cualquier hueco válido → lo quita
    (equivalente a pulsar su botón "×").
 
