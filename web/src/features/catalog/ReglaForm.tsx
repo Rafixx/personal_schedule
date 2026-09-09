@@ -39,34 +39,36 @@ export function ReglaForm({ regla, onGuardado, onCancelar }: ReglaFormProps) {
       onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800"
     >
-      <div>
-        <label htmlFor="regla-etiqueta" className="mb-1 block text-sm font-semibold">
-          Etiqueta
+      <fieldset disabled={reglaUpsert.isPending} className="contents">
+        <div>
+          <label htmlFor="regla-etiqueta" className="mb-1 block text-sm font-semibold">
+            Etiqueta
+          </label>
+          <input id="regla-etiqueta" {...register('etiqueta')} className={CAMPO} />
+          {errors.etiqueta && <p className="mt-1 text-sm text-red-600">{errors.etiqueta.message}</p>}
+        </div>
+        <div>
+          <label htmlFor="regla-tipo" className="mb-1 block text-sm font-semibold">
+            Tipo
+          </label>
+          <select id="regla-tipo" {...register('tipo')} className={CAMPO}>
+            <option value="MAX_SEMANA">Máximo por semana</option>
+            <option value="MIN_SEMANA">Mínimo por semana</option>
+            <option value="NO_CONSECUTIVO">No consecutivo</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="regla-valor" className="mb-1 block text-sm font-semibold">
+            Valor
+          </label>
+          <input id="regla-valor" type="number" {...register('valor')} className={CAMPO} />
+          {errors.valor && <p className="mt-1 text-sm text-red-600">{errors.valor.message}</p>}
+        </div>
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" {...register('activa')} className="h-5 w-5" />
+          Activa
         </label>
-        <input id="regla-etiqueta" {...register('etiqueta')} className={CAMPO} />
-        {errors.etiqueta && <p className="mt-1 text-sm text-red-600">{errors.etiqueta.message}</p>}
-      </div>
-      <div>
-        <label htmlFor="regla-tipo" className="mb-1 block text-sm font-semibold">
-          Tipo
-        </label>
-        <select id="regla-tipo" {...register('tipo')} className={CAMPO}>
-          <option value="MAX_SEMANA">Máximo por semana</option>
-          <option value="MIN_SEMANA">Mínimo por semana</option>
-          <option value="NO_CONSECUTIVO">No consecutivo</option>
-        </select>
-      </div>
-      <div>
-        <label htmlFor="regla-valor" className="mb-1 block text-sm font-semibold">
-          Valor
-        </label>
-        <input id="regla-valor" type="number" {...register('valor')} className={CAMPO} />
-        {errors.valor && <p className="mt-1 text-sm text-red-600">{errors.valor.message}</p>}
-      </div>
-      <label className="flex items-center gap-2 text-sm font-semibold">
-        <input type="checkbox" {...register('activa')} className="h-5 w-5" />
-        Activa
-      </label>
+      </fieldset>
       {reglaUpsert.isError && <p className="text-sm text-red-600">No se pudo guardar. Inténtalo de nuevo.</p>}
       <div className="flex justify-end gap-2 pt-2">
         <button

@@ -109,56 +109,58 @@ export function PlatoForm({
       onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800"
     >
-      <div>
-        <label htmlFor="plato-nombre" className="mb-1 block text-sm font-semibold">
-          Nombre
-        </label>
-        <input id="plato-nombre" {...register('nombre')} className={CAMPO} />
-        {errors.nombre && <p className="mt-1 text-sm text-red-600">{errors.nombre.message}</p>}
-      </div>
-      <div>
-        <span className="mb-1 block text-sm font-semibold">Temporadas</span>
-        <Controller
-          name="temporadas"
-          control={control}
-          render={({ field }) => (
-            <div className="flex flex-wrap gap-3">
-              {TEMPORADAS.map((t) => (
-                <label key={t} className="flex items-center gap-1.5 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={field.value.includes(t)}
-                    onChange={(e) => {
-                      field.onChange(
-                        e.target.checked ? [...field.value, t] : field.value.filter((v) => v !== t)
-                      )
-                    }}
-                  />
-                  {NOMBRE_TEMPORADA[t]}
-                </label>
-              ))}
-            </div>
-          )}
+      <fieldset disabled={platoUpsert.isPending || platoIngredientesReplace.isPending} className="contents">
+        <div>
+          <label htmlFor="plato-nombre" className="mb-1 block text-sm font-semibold">
+            Nombre
+          </label>
+          <input id="plato-nombre" {...register('nombre')} className={CAMPO} />
+          {errors.nombre && <p className="mt-1 text-sm text-red-600">{errors.nombre.message}</p>}
+        </div>
+        <div>
+          <span className="mb-1 block text-sm font-semibold">Temporadas</span>
+          <Controller
+            name="temporadas"
+            control={control}
+            render={({ field }) => (
+              <div className="flex flex-wrap gap-3">
+                {TEMPORADAS.map((t) => (
+                  <label key={t} className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={field.value.includes(t)}
+                      onChange={(e) => {
+                        field.onChange(
+                          e.target.checked ? [...field.value, t] : field.value.filter((v) => v !== t)
+                        )
+                      }}
+                    />
+                    {NOMBRE_TEMPORADA[t]}
+                  </label>
+                ))}
+              </div>
+            )}
+          />
+          {errors.temporadas && <p className="mt-1 text-sm text-red-600">{errors.temporadas.message}</p>}
+        </div>
+        <div>
+          <label htmlFor="plato-etiquetas" className="mb-1 block text-sm font-semibold">
+            Etiquetas (separadas por comas)
+          </label>
+          <input id="plato-etiquetas" {...register('etiquetas')} className={CAMPO} placeholder="pasta, carne…" />
+        </div>
+        <div>
+          <label htmlFor="plato-notas" className="mb-1 block text-sm font-semibold">
+            Notas
+          </label>
+          <textarea id="plato-notas" {...register('notas')} rows={2} className={CAMPO} />
+        </div>
+        <PlatoIngredientesEditor
+          ingredientesDisponibles={ingredientesDisponibles}
+          lineas={lineas}
+          onCambiar={setLineas}
         />
-        {errors.temporadas && <p className="mt-1 text-sm text-red-600">{errors.temporadas.message}</p>}
-      </div>
-      <div>
-        <label htmlFor="plato-etiquetas" className="mb-1 block text-sm font-semibold">
-          Etiquetas (separadas por comas)
-        </label>
-        <input id="plato-etiquetas" {...register('etiquetas')} className={CAMPO} placeholder="pasta, carne…" />
-      </div>
-      <div>
-        <label htmlFor="plato-notas" className="mb-1 block text-sm font-semibold">
-          Notas
-        </label>
-        <textarea id="plato-notas" {...register('notas')} rows={2} className={CAMPO} />
-      </div>
-      <PlatoIngredientesEditor
-        ingredientesDisponibles={ingredientesDisponibles}
-        lineas={lineas}
-        onCambiar={setLineas}
-      />
+      </fieldset>
       {errorLineas && <p className="text-sm text-red-600">{errorLineas}</p>}
       {(platoUpsert.isError || platoIngredientesReplace.isError) && (
         <p className="text-sm text-red-600">No se pudo guardar. Inténtalo de nuevo.</p>

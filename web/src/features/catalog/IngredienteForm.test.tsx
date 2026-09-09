@@ -39,6 +39,32 @@ describe('IngredienteForm', () => {
     })
   })
 
+  it('deshabilita los campos mientras se está guardando', async () => {
+    let resolverPost: (() => void) | undefined
+    server.use(
+      http.post(API_URL, async () => {
+        await new Promise<void>((resolve) => {
+          resolverPost = resolve
+        })
+        return HttpResponse.json({ ok: true, result: { id_ingrediente: 8 } })
+      })
+    )
+    render(<IngredienteForm onGuardado={vi.fn()} onCancelar={vi.fn()} />, { wrapper })
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Lenteja')
+    await userEvent.type(screen.getByLabelText('Proveedor'), 'Mercadona')
+    await userEvent.type(screen.getByLabelText('Unidad base'), 'g')
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }))
+
+    await waitFor(() => expect(screen.getByLabelText('Nombre')).toBeDisabled())
+    expect(screen.getByLabelText('Proveedor')).toBeDisabled()
+    expect(screen.getByLabelText('Unidad base')).toBeDisabled()
+    expect(screen.getByLabelText('Todas')).toBeDisabled()
+    expect(screen.getByLabelText('Kcal / 100g')).toBeDisabled()
+
+    resolverPost?.()
+    await waitFor(() => expect(screen.getByLabelText('Nombre')).not.toBeDisabled())
+  })
+
   it('muestra errores de validación si nombre, proveedor o unidad están vacíos', async () => {
     render(<IngredienteForm onGuardado={vi.fn()} onCancelar={vi.fn()} />, { wrapper })
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }))

@@ -43,6 +43,33 @@ describe('PlatoForm', () => {
     })
   })
 
+  it('deshabilita los campos y el editor de ingredientes mientras se está guardando', async () => {
+    let resolverPost: (() => void) | undefined
+    server.use(
+      http.post(API_URL, async () => {
+        await new Promise<void>((resolve) => {
+          resolverPost = resolve
+        })
+        return HttpResponse.json({ ok: true, result: { id_plato: 11 } })
+      })
+    )
+    render(
+      <PlatoForm ingredientesDisponibles={[]} ingredientesPlato={[]} onGuardado={vi.fn()} onCancelar={vi.fn()} />,
+      { wrapper }
+    )
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Lentejas')
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }))
+
+    await waitFor(() => expect(screen.getByLabelText('Nombre')).toBeDisabled())
+    expect(screen.getByLabelText('Todas')).toBeDisabled()
+    expect(screen.getByLabelText('Etiquetas (separadas por comas)')).toBeDisabled()
+    expect(screen.getByLabelText('Notas')).toBeDisabled()
+    expect(screen.getByRole('button', { name: /añadir ingrediente/i })).toBeDisabled()
+
+    resolverPost?.()
+    await waitFor(() => expect(screen.getByLabelText('Nombre')).not.toBeDisabled())
+  })
+
   it('convierte el texto de etiquetas separado por comas en minúsculas y sin espacios', async () => {
     let payloadRecibido: unknown = null
     server.use(

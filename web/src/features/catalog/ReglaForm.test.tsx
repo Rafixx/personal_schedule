@@ -37,6 +37,29 @@ describe('ReglaForm', () => {
     })
   })
 
+  it('deshabilita los campos mientras se está guardando', async () => {
+    let resolverPost: (() => void) | undefined
+    server.use(
+      http.post(API_URL, async () => {
+        await new Promise<void>((resolve) => {
+          resolverPost = resolve
+        })
+        return HttpResponse.json({ ok: true, result: { id: 5 } })
+      })
+    )
+    render(<ReglaForm onGuardado={vi.fn()} onCancelar={vi.fn()} />, { wrapper })
+    await userEvent.type(screen.getByLabelText('Etiqueta'), 'pasta')
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }))
+
+    await waitFor(() => expect(screen.getByLabelText('Etiqueta')).toBeDisabled())
+    expect(screen.getByLabelText('Tipo')).toBeDisabled()
+    expect(screen.getByLabelText('Valor')).toBeDisabled()
+    expect(screen.getByLabelText('Activa')).toBeDisabled()
+
+    resolverPost?.()
+    await waitFor(() => expect(screen.getByLabelText('Etiqueta')).not.toBeDisabled())
+  })
+
   it('muestra un error de validación si la etiqueta está vacía', async () => {
     render(<ReglaForm onGuardado={vi.fn()} onCancelar={vi.fn()} />, { wrapper })
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }))
