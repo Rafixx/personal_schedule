@@ -423,7 +423,7 @@ reales en el editor anidado. La creación/edición/borrado reales (que sí
 mutan la hoja) quedan pendientes de que el usuario las pruebe en su propio
 dispositivo, siguiendo la lista de comprobación del plan.
 
-## Arrastrar y soltar en el planificador (diseño)
+## Arrastrar y soltar en el planificador (implementado)
 
 Capa aditiva sobre el planificador táctil ya construido — el tap sigue
 funcionando exactamente igual en todos los casos; el arrastre nunca es la
@@ -497,3 +497,8 @@ el tipo de arrastre y destino) se extrae a una función pura testeable por
 separado de la integración visual con `dnd-kit` (que no se simula con
 mocks). Un test de integración mínimo confirma que `DndContext` envuelve
 correctamente `WeekBoard` y `Recetario` dentro de `PlannerPage`.
+
+**Estado:** implementado. Lógica de decisión en `features/planner/dragDrop.ts`
+(`resolverArrastre`, testeada); `useMovePlanEntry` optimista y `moverPlato` en
+`useWeekPlan`; `Recetario`/`Slot` como arrastrable/destino vía `@dnd-kit/core`;
+`DndContext`/`DragOverlay`/sensores en `PlannerPage`.
