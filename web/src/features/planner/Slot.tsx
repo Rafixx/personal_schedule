@@ -44,8 +44,7 @@ interface DishTileArrastrableProps {
 }
 
 function DishTileArrastrable({ asignacion, onQuitar }: DishTileArrastrableProps) {
-  const plato = asignacion.plato
-  if (!plato) return null
+  const plato = asignacion.plato!
   const origen: OrigenArrastre = { tipo: 'asignado', fecha: asignacion.fecha, orden: asignacion.orden, plato }
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `asignado-${asignacion.fecha}-${asignacion.orden}`,
