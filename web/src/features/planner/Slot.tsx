@@ -1,4 +1,6 @@
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { AsignacionSemana } from '../../domain/reglas'
+import type { DestinoArrastre, OrigenArrastre } from './dragDrop'
 import { DishTile } from './DishTile'
 
 export interface SlotProps {
@@ -9,12 +11,18 @@ export interface SlotProps {
 }
 
 export function Slot({ asignacion, etiquetaHueco, onAbrirPicker, onQuitar }: SlotProps) {
+  const destino: DestinoArrastre = { fecha: asignacion.fecha, orden: asignacion.orden }
+  const { setNodeRef, isOver } = useDroppable({
+    id: `hueco-${asignacion.fecha}-${asignacion.orden}`,
+    data: destino
+  })
+
   return (
-    <div className="flex flex-1 flex-col gap-0.5">
+    <div ref={setNodeRef} className="flex flex-1 flex-col gap-0.5">
       <span className="pl-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-neutral-500">{etiquetaHueco}</span>
-      <div className="flex flex-1">
+      <div className={`flex flex-1 rounded-xl ${isOver ? 'ring-2 ring-amber-500' : ''}`}>
         {asignacion.plato ? (
-          <DishTile plato={asignacion.plato} fecha={asignacion.fecha} onQuitar={onQuitar} />
+          <DishTileArrastrable asignacion={asignacion} onQuitar={onQuitar} />
         ) : (
           <button
             type="button"
@@ -26,6 +34,34 @@ export function Slot({ asignacion, etiquetaHueco, onAbrirPicker, onQuitar }: Slo
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+interface DishTileArrastrableProps {
+  asignacion: AsignacionSemana
+  onQuitar: () => void
+}
+
+function DishTileArrastrable({ asignacion, onQuitar }: DishTileArrastrableProps) {
+  const plato = asignacion.plato
+  if (!plato) return null
+  const origen: OrigenArrastre = { tipo: 'asignado', fecha: asignacion.fecha, orden: asignacion.orden, plato }
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `asignado-${asignacion.fecha}-${asignacion.orden}`,
+    data: origen
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={`Arrastrar ${plato.nombre}`}
+      className="flex flex-1"
+      style={{ opacity: isDragging ? 0.4 : 1 }}
+    >
+      <DishTile plato={plato} fecha={asignacion.fecha} onQuitar={onQuitar} />
     </div>
   )
 }

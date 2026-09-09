@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { DndContext } from '@dnd-kit/core'
 import { Slot } from './Slot'
 import type { AsignacionSemana } from '../../domain/reglas'
 import type { Plato } from '../../domain/types'
@@ -35,6 +36,37 @@ describe('Slot', () => {
     const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 2, plato: null }
     const onAbrirPicker = vi.fn()
     render(<Slot asignacion={asignacion} etiquetaHueco="Segundo" onAbrirPicker={onAbrirPicker} onQuitar={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /añadir/i }))
+    expect(onAbrirPicker).toHaveBeenCalledOnce()
+  })
+
+  it('el hueco ocupado es arrastrable', () => {
+    const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 1, plato: plato() }
+    render(<Slot asignacion={asignacion} etiquetaHueco="Primero" onAbrirPicker={vi.fn()} onQuitar={vi.fn()} />)
+    const arrastrable = screen.getByRole('button', { name: 'Arrastrar Pasta' })
+    expect(arrastrable).toHaveAttribute('aria-roledescription', 'draggable')
+  })
+
+  it('el botón de quitar sigue funcionando envuelto en el arrastrable, dentro de un DndContext real', async () => {
+    const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 1, plato: plato() }
+    const onQuitar = vi.fn()
+    render(
+      <DndContext>
+        <Slot asignacion={asignacion} etiquetaHueco="Primero" onAbrirPicker={vi.fn()} onQuitar={onQuitar} />
+      </DndContext>
+    )
+    await userEvent.click(screen.getByRole('button', { name: /quitar pasta/i }))
+    expect(onQuitar).toHaveBeenCalledOnce()
+  })
+
+  it('el botón de añadir sigue funcionando en un hueco vacío, dentro de un DndContext real', async () => {
+    const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 2, plato: null }
+    const onAbrirPicker = vi.fn()
+    render(
+      <DndContext>
+        <Slot asignacion={asignacion} etiquetaHueco="Segundo" onAbrirPicker={onAbrirPicker} onQuitar={vi.fn()} />
+      </DndContext>
+    )
     await userEvent.click(screen.getByRole('button', { name: /añadir/i }))
     expect(onAbrirPicker).toHaveBeenCalledOnce()
   })
