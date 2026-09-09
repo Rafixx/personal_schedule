@@ -502,3 +502,22 @@ correctamente `WeekBoard` y `Recetario` dentro de `PlannerPage`.
 (`resolverArrastre`, testeada); `useMovePlanEntry` optimista y `moverPlato` en
 `useWeekPlan`; `Recetario`/`Slot` como arrastrable/destino vía `@dnd-kit/core`;
 `DndContext`/`DragOverlay`/sensores en `PlannerPage`.
+
+## Pendiente (ideas anotadas para después)
+
+- **Autocompletado de etiquetas en `PlatoForm` con pills como sugerencia,
+  no como única opción.** Surgió al plantear si el campo "Etiquetas" de
+  `PlatoForm.tsx` (hoy texto libre) debería restringirse a pills de las
+  etiquetas que ya tienen una regla en Reglas. Restringirlo así perdería
+  funcionalidad real: hoy se puede etiquetar un plato para organizarlo o
+  colorearlo (vía `colorVarDePlato`) sin que exista todavía una regla
+  sobre esa etiqueta, y si más adelante se borra una regla (borrado
+  físico, ya implementado así) los platos que ya tenían esa etiqueta la
+  conservarían pero dejaría de poder asignarse a platos nuevos —una
+  etiqueta huérfana confusa. La mejora real es añadir autocompletado con
+  pills sugeridas (etiquetas ya usadas por otros platos + las de las
+  reglas existentes) sin dejar de permitir texto libre, para reducir
+  errores de typo/inconsistencia (`"verdura"` vs `"verduras"`) que
+  `normalizarEtiqueta` no cubre (solo normaliza mayúsculas/acentos, no
+  sinónimos), sin perder la libertad de crear categorías nuevas antes de
+  que exista una regla sobre ellas.
