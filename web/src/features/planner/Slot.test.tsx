@@ -1,10 +1,16 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DndContext } from '@dnd-kit/core'
+import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import type { ReactNode } from 'react'
 import { Slot } from './Slot'
 import type { AsignacionSemana } from '../../domain/reglas'
 import type { Plato } from '../../domain/types'
+
+function ConDndContext({ children }: { children: ReactNode }) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  return <DndContext sensors={sensors}>{children}</DndContext>
+}
 
 function plato(): Plato {
   return { id: 1, nombre: 'Pasta', temporadas: ['TODAS'], etiquetas: ['pasta'], notas: '', activo: true }
@@ -51,9 +57,9 @@ describe('Slot', () => {
     const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 1, plato: plato() }
     const onQuitar = vi.fn()
     render(
-      <DndContext>
+      <ConDndContext>
         <Slot asignacion={asignacion} etiquetaHueco="Primero" onAbrirPicker={vi.fn()} onQuitar={onQuitar} />
-      </DndContext>
+      </ConDndContext>
     )
     await userEvent.click(screen.getByRole('button', { name: /quitar pasta/i }))
     expect(onQuitar).toHaveBeenCalledOnce()
@@ -63,9 +69,9 @@ describe('Slot', () => {
     const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 2, plato: null }
     const onAbrirPicker = vi.fn()
     render(
-      <DndContext>
+      <ConDndContext>
         <Slot asignacion={asignacion} etiquetaHueco="Segundo" onAbrirPicker={onAbrirPicker} onQuitar={vi.fn()} />
-      </DndContext>
+      </ConDndContext>
     )
     await userEvent.click(screen.getByRole('button', { name: /añadir/i }))
     expect(onAbrirPicker).toHaveBeenCalledOnce()
