@@ -50,11 +50,12 @@ function DishTileArrastrable({ asignacion, onQuitar }: DishTileArrastrableProps)
     id: `asignado-${asignacion.fecha}-${asignacion.orden}`,
     data: origen
   })
+  const { role: _role, tabIndex: _tabIndex, ...atributosSinFoco } = attributes
 
   return (
     <div
       ref={setNodeRef}
-      {...attributes}
+      {...atributosSinFoco}
       {...listeners}
       aria-label={`Arrastrar ${plato.nombre}`}
       className="flex flex-1"

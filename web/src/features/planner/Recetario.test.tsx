@@ -28,9 +28,10 @@ describe('Recetario', () => {
     expect(screen.getByText('Ningún plato coincide')).toBeInTheDocument()
   })
 
-  it('envuelve cada plato en un elemento arrastrable', () => {
+  it('envuelve cada plato en un elemento arrastrable, sin foco de teclado (no hay soporte de arrastre por teclado)', () => {
     render(<Recetario platos={[plato(1, 'Gazpacho')]} />)
-    const arrastrable = screen.getByRole('button', { name: 'Arrastrar Gazpacho' })
-    expect(arrastrable).toHaveAttribute('aria-roledescription', 'draggable')
+    const arrastrable = screen.getByLabelText('Arrastrar Gazpacho')
+    expect(arrastrable).not.toHaveAttribute('role')
+    expect(arrastrable).not.toHaveAttribute('tabindex')
   })
 })

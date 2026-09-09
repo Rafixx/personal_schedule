@@ -46,11 +46,12 @@ describe('Slot', () => {
     expect(onAbrirPicker).toHaveBeenCalledOnce()
   })
 
-  it('el hueco ocupado es arrastrable', () => {
+  it('el hueco ocupado es arrastrable, sin foco de teclado (no hay soporte de arrastre por teclado)', () => {
     const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 1, plato: plato() }
     render(<Slot asignacion={asignacion} etiquetaHueco="Primero" onAbrirPicker={vi.fn()} onQuitar={vi.fn()} />)
-    const arrastrable = screen.getByRole('button', { name: 'Arrastrar Pasta' })
-    expect(arrastrable).toHaveAttribute('aria-roledescription', 'draggable')
+    const arrastrable = screen.getByLabelText('Arrastrar Pasta')
+    expect(arrastrable).not.toHaveAttribute('role')
+    expect(arrastrable).not.toHaveAttribute('tabindex')
   })
 
   it('el botón de quitar sigue funcionando envuelto en el arrastrable, dentro de un DndContext real', async () => {

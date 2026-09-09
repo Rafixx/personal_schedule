@@ -82,7 +82,12 @@ export function PlannerPage({ lunes, setLunes, vista, setVista }: PlannerPagePro
         semana.cargando ? (
           <p className="px-5 pt-3.5 text-center text-neutral-500">Cargando…</p>
         ) : (
-          <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+          <DndContext
+            sensors={sensors}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDragCancel={() => setArrastreActivo(null)}
+          >
             <main className="grid grid-cols-1 gap-4 px-5 pt-3.5 lg:grid-cols-[1fr_300px]">
               <WeekBoard
                 dias={semana.dias}

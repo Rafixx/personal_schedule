@@ -152,7 +152,6 @@ export function useMovePlanEntry() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (args: { from: ExtremoPlan; to: ExtremoPlan }) => sheetsClient.apiPost('plan.move', args),
-    retry: 2,
     onMutate: async (args) => {
       const previas = await instantaneaPlan(queryClient)
       queryClient.setQueriesData<PlanEntry[]>({ queryKey: ['plan'] }, (anteriores) => {

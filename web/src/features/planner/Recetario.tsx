@@ -40,11 +40,12 @@ function DishChipArrastrable({ plato }: { plato: Plato }) {
     id: `recetario-${plato.id}`,
     data: origen
   })
+  const { role: _role, tabIndex: _tabIndex, ...atributosSinFoco } = attributes
 
   return (
     <div
       ref={setNodeRef}
-      {...attributes}
+      {...atributosSinFoco}
       {...listeners}
       aria-label={`Arrastrar ${plato.nombre}`}
       style={{ opacity: isDragging ? 0.4 : 1 }}
