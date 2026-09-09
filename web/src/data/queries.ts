@@ -144,11 +144,37 @@ interface ExtremoPlan {
   orden: Orden
 }
 
+function mismoExtremo(entrada: PlanEntry, extremo: ExtremoPlan): boolean {
+  return entrada.fecha === extremo.fecha && entrada.turno === extremo.turno && entrada.orden === extremo.orden
+}
+
 export function useMovePlanEntry() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (args: { from: ExtremoPlan; to: ExtremoPlan }) => sheetsClient.apiPost('plan.move', args),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
+    retry: 2,
+    onMutate: async (args) => {
+      const previas = await instantaneaPlan(queryClient)
+      queryClient.setQueriesData<PlanEntry[]>({ queryKey: ['plan'] }, (anteriores) => {
+        if (!anteriores) return anteriores
+        const entradaFrom = anteriores.find((e) => mismoExtremo(e, args.from))
+        const entradaTo = anteriores.find((e) => mismoExtremo(e, args.to))
+        const sinExtremos = anteriores.filter((e) => !mismoExtremo(e, args.from) && !mismoExtremo(e, args.to))
+        const resultado = [...sinExtremos]
+        if (entradaFrom) {
+          resultado.push({ ...entradaFrom, fecha: args.to.fecha, turno: args.to.turno, orden: args.to.orden })
+        }
+        if (entradaTo) {
+          resultado.push({ ...entradaTo, fecha: args.from.fecha, turno: args.from.turno, orden: args.from.orden })
+        }
+        return resultado
+      })
+      return { previas }
+    },
+    onError: (_err, _args, context) => {
+      if (context) revertirPlan(queryClient, context.previas)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
   })
 }
 

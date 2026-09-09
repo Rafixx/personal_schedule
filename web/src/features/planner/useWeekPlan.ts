@@ -1,7 +1,7 @@
 import type { Orden } from '../../domain/types'
 import { aAsignaciones, construirSemana } from '../../domain/semana'
 import { evaluarSemana } from '../../domain/reglas'
-import { useCatalogo, useDeletePlanEntry, usePlan, useSetPlanEntry } from '../../data/queries'
+import { useCatalogo, useDeletePlanEntry, useMovePlanEntry, usePlan, useSetPlanEntry } from '../../data/queries'
 import { fechasSemana } from '../../shared/semanaDates'
 
 export function useWeekPlan(lunes: Date) {
@@ -10,6 +10,7 @@ export function useWeekPlan(lunes: Date) {
   const plan = usePlan(fechas[0], fechas[4])
   const setPlanEntry = useSetPlanEntry()
   const deletePlanEntry = useDeletePlanEntry()
+  const movePlanEntry = useMovePlanEntry()
 
   const platos = catalogo.data?.catalogo.platos ?? []
   const platosActivos = platos.filter((p) => p.activo)
@@ -26,14 +27,24 @@ export function useWeekPlan(lunes: Date) {
     deletePlanEntry.mutate({ fecha, turno: 'COMIDA', orden })
   }
 
+  function moverPlato(origen: { fecha: string; orden: Orden }, destino: { fecha: string; orden: Orden }) {
+    movePlanEntry.mutate({
+      from: { fecha: origen.fecha, turno: 'COMIDA', orden: origen.orden },
+      to: { fecha: destino.fecha, turno: 'COMIDA', orden: destino.orden }
+    })
+  }
+
   return {
     dias,
     estadosRegla,
     platosActivos,
     cargando: catalogo.isLoading || plan.isLoading,
-    error: catalogo.isError || plan.isError || setPlanEntry.isError || deletePlanEntry.isError,
-    guardando: setPlanEntry.isPending || deletePlanEntry.isPending || plan.isFetching,
+    error:
+      catalogo.isError || plan.isError || setPlanEntry.isError || deletePlanEntry.isError || movePlanEntry.isError,
+    guardando:
+      setPlanEntry.isPending || deletePlanEntry.isPending || movePlanEntry.isPending || plan.isFetching,
     asignarPlato,
-    quitarPlato
+    quitarPlato,
+    moverPlato
   }
 }

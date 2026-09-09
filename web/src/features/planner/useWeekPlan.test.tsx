@@ -120,4 +120,54 @@ describe('useWeekPlan', () => {
     await waitFor(() => expect(result.current.dias[0].huecos[0].plato).toBeNull())
     await waitFor(() => expect(result.current.dias[0].huecos[0].plato?.nombre).toBe('Pasta'), { timeout: 8000 })
   }, 10000)
+
+  it('moverPlato intercambia los platos de los dos huecos al instante', async () => {
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        const url = new URL(request.url)
+        if (url.searchParams.get('action') === 'bootstrap') {
+          return HttpResponse.json({
+            ok: true,
+            platos: [
+              { id_plato: 5, nombre: 'Pasta', temporada: 'TODAS', etiquetas: 'pasta', notas: '', activo: true },
+              { id_plato: 6, nombre: 'Pollo', temporada: 'TODAS', etiquetas: 'carne', notas: '', activo: true }
+            ],
+            ingredientes: [],
+            ingredientesPlatos: [],
+            reglas: [],
+            proveedores: []
+          })
+        }
+        return HttpResponse.json({
+          ok: true,
+          entries: [
+            { id: 1, fecha: '2026-09-07', turno: 'COMIDA', orden: 1, id_plato: 5, notas: '' },
+            { id: 2, fecha: '2026-09-08', turno: 'COMIDA', orden: 2, id_plato: 6, notas: '' }
+          ]
+        })
+      })
+    )
+    let resolverPost: (() => void) | undefined
+    server.use(
+      http.post(API_URL, async () => {
+        await new Promise<void>((resolve) => {
+          resolverPost = resolve
+        })
+        return HttpResponse.json({ ok: true, result: { ok: true } })
+      })
+    )
+    const { result } = renderHook(() => useWeekPlan(new Date(2026, 8, 7)), { wrapper })
+    await waitFor(() => expect(result.current.cargando).toBe(false))
+    expect(result.current.dias[0].huecos[0].plato?.nombre).toBe('Pasta')
+    expect(result.current.dias[1].huecos[1].plato?.nombre).toBe('Pollo')
+
+    result.current.moverPlato({ fecha: '2026-09-07', orden: 1 }, { fecha: '2026-09-08', orden: 2 })
+
+    await waitFor(() => expect(result.current.dias[0].huecos[0].plato?.nombre).toBe('Pollo'))
+    expect(result.current.dias[1].huecos[1].plato?.nombre).toBe('Pasta')
+    expect(resolverPost).toBeDefined()
+
+    resolverPost?.()
+    await waitFor(() => expect(result.current.guardando).toBe(false))
+  })
 })

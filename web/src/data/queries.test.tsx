@@ -8,6 +8,7 @@ import {
   useCatalogo,
   useIngredienteDelete,
   useIngredienteUpsert,
+  useMovePlanEntry,
   usePlatoDelete,
   usePlatoIngredientesReplace,
   usePlatoUpsert,
@@ -62,6 +63,32 @@ describe('useSetPlanEntry', () => {
     const { result } = renderHook(() => useSetPlanEntry(), { wrapper })
     result.current.mutate({ fecha: '2026-09-07', turno: 'COMIDA', orden: 1, idPlato: 1 })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+  })
+})
+
+describe('useMovePlanEntry', () => {
+  it('llama a plan.move con los dos extremos', async () => {
+    let payloadRecibido: unknown = null
+    server.use(
+      http.post(API_URL, async ({ request }) => {
+        payloadRecibido = await request.json()
+        return HttpResponse.json({ ok: true, result: { ok: true } })
+      })
+    )
+    const { result } = renderHook(() => useMovePlanEntry(), { wrapper })
+    result.current.mutate({
+      from: { fecha: '2026-09-07', turno: 'COMIDA', orden: 1 },
+      to: { fecha: '2026-09-08', turno: 'COMIDA', orden: 2 }
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(payloadRecibido).toEqual({
+      action: 'plan.move',
+      token: 'test-token',
+      payload: {
+        from: { fecha: '2026-09-07', turno: 'COMIDA', orden: 1 },
+        to: { fecha: '2026-09-08', turno: 'COMIDA', orden: 2 }
+      }
+    })
   })
 })
 
