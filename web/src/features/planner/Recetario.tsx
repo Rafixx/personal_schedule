@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useDraggable } from '@dnd-kit/core'
 import type { Plato } from '../../domain/types'
 import { DishChip } from './DishChip'
+import type { OrigenArrastre } from './dragDrop'
 
 export interface RecetarioProps {
   platos: Plato[]
@@ -25,9 +27,29 @@ export function Recetario({ platos }: RecetarioProps) {
       <div className="flex flex-col gap-2 overflow-y-auto pr-0.5">
         {filtrados.length === 0 && <p className="py-3.5 text-center text-sm text-neutral-500">Ningún plato coincide</p>}
         {filtrados.map((plato) => (
-          <DishChip key={plato.id} plato={plato} />
+          <DishChipArrastrable key={plato.id} plato={plato} />
         ))}
       </div>
     </aside>
+  )
+}
+
+function DishChipArrastrable({ plato }: { plato: Plato }) {
+  const origen: OrigenArrastre = { tipo: 'recetario', plato }
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `recetario-${plato.id}`,
+    data: origen
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={`Arrastrar ${plato.nombre}`}
+      style={{ opacity: isDragging ? 0.4 : 1 }}
+    >
+      <DishChip plato={plato} />
+    </div>
   )
 }

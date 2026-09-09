@@ -27,4 +27,10 @@ describe('Recetario', () => {
     await userEvent.type(screen.getByPlaceholderText('Buscar plato…'), 'zzz')
     expect(screen.getByText('Ningún plato coincide')).toBeInTheDocument()
   })
+
+  it('envuelve cada plato en un elemento arrastrable', () => {
+    render(<Recetario platos={[plato(1, 'Gazpacho')]} />)
+    const arrastrable = screen.getByRole('button', { name: 'Arrastrar Gazpacho' })
+    expect(arrastrable).toHaveAttribute('aria-roledescription', 'draggable')
+  })
 })
