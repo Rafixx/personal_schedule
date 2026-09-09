@@ -422,3 +422,65 @@ un plato existente (Gazpacho) precarga correctamente sus 4 ingredientes
 reales en el editor anidado. La creación/edición/borrado reales (que sí
 mutan la hoja) quedan pendientes de que el usuario las pruebe en su propio
 dispositivo, siguiendo la lista de comprobación del plan.
+
+## Arrastrar y soltar en el planificador (diseño)
+
+Capa aditiva sobre el planificador táctil ya construido — el tap sigue
+funcionando exactamente igual en todos los casos; el arrastre nunca es la
+única vía. Primer uso real de `@dnd-kit/core` (instalado desde el scaffolding
+original, nunca usado hasta ahora). Recupera la intención original de la
+maqueta (el Recetario era la fuente de arrastre) que quedó pendiente al
+diferir esta funcionalidad durante el plan del planificador.
+
+**Alcance de las tres interacciones:**
+1. Desde una tarjeta del Recetario a cualquier hueco (vacío u ocupado) →
+   asigna ese plato al hueco, reemplazando lo que hubiera.
+2. De un hueco ocupado a otro hueco ocupado → intercambia los dos platos
+   (`plan.move`, acción ya construida y verificada en la API, sin ningún
+   consumidor en la UI hasta ahora).
+3. Arrastrar un plato asignado fuera de cualquier hueco válido → lo quita
+   (equivalente a pulsar su botón "×").
+
+Soltar sobre el propio hueco de origen, o fuera de cualquier zona válida
+cuando el arrastre viene del Recetario, no hace nada.
+
+**Sensores:** `TouchSensor` con `activationConstraint: {delay: 200, tolerance:
+8}` (necesario para que el scroll táctil y el arrastre no compitan en la
+tablet de cocina) + `PointerSensor` con `activationConstraint: {distance: 8}`
+(ratón/trackpad en desarrollo). Un único `<DndContext>` envuelve el `<main>`
+de `PlannerPage` que ya contiene `WeekBoard` y `Recetario` lado a lado —
+necesario porque el arrastre cruza de uno a otro.
+
+**Feedback visual:** `DragOverlay` de dnd-kit muestra una copia flotante del
+plato mientras se arrastra. El hueco sobre el que se está arrastrando en ese
+momento se resalta con `ring-2 ring-amber-500` (mismo acento ámbar que ya usa
+el resto de la app) vía el `isOver` que devuelve `useDroppable`. No se añade
+ningún aviso nuevo de reglas/temporada durante el arrastre — `RulesStrip` y
+`DishTile` ya se recalculan en vivo tras soltar, así que el aviso aparece
+justo después de aplicarse el cambio, igual que hoy con el selector táctil.
+
+**`data/queries.ts`:** `useMovePlanEntry()` (ya existe) gana el mismo patrón
+de actualización optimista que ya usan `useSetPlanEntry`/`useDeletePlanEntry`
+(`onMutate` intercambia los `idPlato` de las dos entradas al instante,
+`onError` revierte, `onSettled` invalida `['plan']`) — un intercambio
+arrastrado tiene que sentirse tan instantáneo como un tap.
+
+**`features/planner/useWeekPlan.ts`:** gana `moverPlato(origen: {fecha,
+orden}, destino: {fecha, orden})`, que llama a `useMovePlanEntry`.
+
+**Componentes:**
+- `DishChip.tsx` (Recetario) y `DishTile.tsx` (hueco ocupado) se convierten
+  en arrastrables vía `useDraggable`, con datos de arrastre que identifican
+  su origen (`{tipo: 'recetario', idPlato}` o `{tipo: 'asignado', fecha,
+  orden, idPlato}`).
+- `Slot.tsx` se convierte en zona de destino vía `useDroppable` (vacío y
+  ocupado), con datos de destino `{fecha, orden}`.
+- `PlannerPage.tsx` monta el `DndContext` y traduce `onDragEnd` a las tres
+  interacciones descritas arriba, llamando a `asignarPlato`/`moverPlato`/
+  `quitarPlato` de `useWeekPlan` según corresponda.
+
+**Tests:** la lógica de decisión de `onDragEnd` (qué interacción aplica según
+el tipo de arrastre y destino) se extrae a una función pura testeable por
+separado de la integración visual con `dnd-kit` (que no se simula con
+mocks). Un test de integración mínimo confirma que `DndContext` envuelve
+correctamente `WeekBoard` y `Recetario` dentro de `PlannerPage`.
