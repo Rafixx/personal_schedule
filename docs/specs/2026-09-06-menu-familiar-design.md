@@ -474,15 +474,20 @@ arrastrado tiene que sentirse tan instantáneo como un tap.
 orden}, destino: {fecha, orden})`, que llama a `useMovePlanEntry`.
 
 **Componentes:**
-- `DishChip.tsx` (Recetario) y `DishTile.tsx` (hueco ocupado) se convierten
-  en arrastrables vía `useDraggable`, pasando como `data` el propio
+- `Recetario.tsx` y `Slot.tsx` envuelven cada `DishChip`/`DishTile` en un
+  elemento arrastrable vía `useDraggable`, pasando como `data` el propio
   `OrigenArrastre` de `dragDrop.ts` (`{tipo: 'recetario', plato}` o
   `{tipo: 'asignado', fecha, orden, plato}`, con el `Plato` completo, no
-  solo su id) — así `onDragEnd` no necesita buscar el plato por id y
-  `DragOverlay` puede renderizar `<DishChip plato={...}/>` directamente.
-- `Slot.tsx` se convierte en zona de destino vía `useDroppable` (vacío y
-  ocupado), con datos de destino el propio `DestinoArrastre` (`{fecha,
-  orden}`).
+  solo su id) — así `onDragEnd` no necesita buscar el plato por id.
+  `DishChip.tsx` y `DishTile.tsx` en sí no cambian: siguen siendo
+  puramente presentacionales, precisamente para poder reutilizar
+  `DishChip` sin envolver dentro de `DragOverlay` sin arriesgar un id de
+  arrastre duplicado (si `DishChip` llamara a `useDraggable` sobre sí
+  mismo, la copia flotante del `DragOverlay` registraría el mismo id que
+  la tarjeta de origen mientras ambas están montadas a la vez).
+- `Slot.tsx` se convierte además en zona de destino vía `useDroppable`
+  (vacío y ocupado), con datos de destino el propio `DestinoArrastre`
+  (`{fecha, orden}`).
 - `PlannerPage.tsx` monta el `DndContext` y traduce `onDragEnd` a las tres
   interacciones descritas arriba, llamando a `asignarPlato`/`moverPlato`/
   `quitarPlato` de `useWeekPlan` según corresponda.
