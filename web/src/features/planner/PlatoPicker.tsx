@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Plato } from '../../domain/types'
-import { colorVarDeEtiqueta } from '../../shared/tagColors'
+import { colorVarDePlato } from '../../shared/tagColors'
 
 export interface PlatoPickerProps {
   abierto: boolean
@@ -60,7 +60,7 @@ export function PlatoPicker({ abierto, tituloHueco, platos, onElegir, onCerrar }
           {filtrados.length === 0 && <p className="py-3.5 text-center text-sm text-neutral-500">Ningún plato coincide</p>}
           {filtrados.map((plato) => {
             const etiqueta = plato.etiquetas[0]
-            const colorVar = etiqueta ? colorVarDeEtiqueta(etiqueta) : 'var(--tag-color-0)'
+            const colorVar = colorVarDePlato(plato)
             return (
               <button
                 key={plato.id}

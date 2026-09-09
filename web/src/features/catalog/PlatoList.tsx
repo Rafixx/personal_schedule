@@ -1,12 +1,26 @@
 import { useState } from 'react'
-import type { Ingrediente, IngredientePlato, Plato } from '../../domain/types'
+import type { Ingrediente, IngredientePlato, Plato, Temporada } from '../../domain/types'
 import { usePlatoDelete, usePlatoUpsert } from '../../data/queries'
+import { colorVarDePlato } from '../../shared/tagColors'
 import { PlatoForm } from './PlatoForm'
 
 export interface PlatoListProps {
   platos: Plato[]
   ingredientesDisponibles: Ingrediente[]
   ingredientesPlato: IngredientePlato[]
+}
+
+const NOMBRE_TEMPORADA: Record<Temporada, string> = {
+  TODAS: 'todas',
+  PRIMAVERA: 'primavera',
+  VERANO: 'verano',
+  OTOÑO: 'otoño',
+  INVIERNO: 'invierno'
+}
+
+function textoTemporadas(temporadas: Temporada[]): string {
+  if (temporadas.includes('TODAS')) return 'todas las temporadas'
+  return temporadas.map((t) => NOMBRE_TEMPORADA[t]).join(', ')
 }
 
 export function PlatoList({ platos, ingredientesDisponibles, ingredientesPlato }: PlatoListProps) {
@@ -63,7 +77,18 @@ export function PlatoList({ platos, ingredientesDisponibles, ingredientesPlato }
           >
             <div>
               <p className="font-semibold">{plato.nombre}</p>
-              <p className="text-sm text-neutral-500">{plato.activo ? 'Activo' : 'Inactivo'}</p>
+              <p className="flex flex-wrap items-center gap-1.5 text-sm text-neutral-500">
+                <span
+                  aria-hidden="true"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: colorVarDePlato(plato) }}
+                />
+                <span>
+                  {plato.etiquetas.length > 0 ? plato.etiquetas.join(', ') : 'sin etiquetas'} ·{' '}
+                  {textoTemporadas(plato.temporadas)} ·
+                </span>
+                <span>{plato.activo ? 'Activo' : 'Inactivo'}</span>
+              </p>
             </div>
             <div className="flex gap-2">
               <button

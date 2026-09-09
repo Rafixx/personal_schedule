@@ -1,5 +1,5 @@
 import type { Plato } from '../../domain/types'
-import { colorVarDeEtiqueta } from '../../shared/tagColors'
+import { colorVarDePlato } from '../../shared/tagColors'
 
 export interface DishChipProps {
   plato: Plato
@@ -7,7 +7,7 @@ export interface DishChipProps {
 
 export function DishChip({ plato }: DishChipProps) {
   const etiqueta = plato.etiquetas[0]
-  const colorVar = etiqueta ? colorVarDeEtiqueta(etiqueta) : 'var(--tag-color-0)'
+  const colorVar = colorVarDePlato(plato)
   const fueraDeTodas = !plato.temporadas.includes('TODAS') && plato.temporadas.length > 0
 
   return (

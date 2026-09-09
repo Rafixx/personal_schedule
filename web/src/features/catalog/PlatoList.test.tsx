@@ -30,6 +30,17 @@ describe('PlatoList', () => {
     expect(within(filaCocido).getByText('Inactivo')).toBeInTheDocument()
   })
 
+  it('muestra las etiquetas y la temporada de cada plato, con un aviso cuando no tiene etiquetas', () => {
+    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
+    const filaGazpacho = screen.getByText('Gazpacho').closest('li')
+    const filaCocido = screen.getByText('Cocido').closest('li')
+    if (!filaGazpacho || !filaCocido) throw new Error('no se encontraron las filas')
+    expect(within(filaGazpacho).getByText(/verdura/)).toBeInTheDocument()
+    expect(within(filaGazpacho).getByText(/verano/)).toBeInTheDocument()
+    expect(within(filaCocido).getByText(/sin etiquetas/)).toBeInTheDocument()
+    expect(within(filaCocido).getByText(/invierno/)).toBeInTheDocument()
+  })
+
   it('abre el formulario precargado al pulsar "Editar"', async () => {
     render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
     const fila = screen.getByText('Gazpacho').closest('li')

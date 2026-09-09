@@ -1,6 +1,6 @@
 import type { Plato } from '../../domain/types'
 import { estaEnTemporada, temporadaDe } from '../../domain/temporadas'
-import { colorVarDeEtiqueta } from '../../shared/tagColors'
+import { colorVarDePlato } from '../../shared/tagColors'
 
 export interface DishTileProps {
   plato: Plato
@@ -10,7 +10,7 @@ export interface DishTileProps {
 
 export function DishTile({ plato, fecha, onQuitar }: DishTileProps) {
   const etiqueta = plato.etiquetas[0]
-  const colorVar = etiqueta ? colorVarDeEtiqueta(etiqueta) : 'var(--tag-color-0)'
+  const colorVar = colorVarDePlato(plato)
   const fueraDeTemporada = !estaEnTemporada(plato.temporadas, fecha)
 
   return (

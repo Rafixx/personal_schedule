@@ -1,5 +1,5 @@
 import type { DiaMes } from './useMonthPlan'
-import { colorVarDeEtiqueta } from '../../shared/tagColors'
+import { colorVarDePlato } from '../../shared/tagColors'
 
 const DIAS_CORTOS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
@@ -36,7 +36,7 @@ export function MonthView({ dias, fechasSemanaActual, onSeleccionarDia }: MonthV
                     key={i}
                     data-testid="dia-punto"
                     className="h-1.75 w-1.75 rounded-full"
-                    style={{ backgroundColor: colorVarDeEtiqueta(plato.etiquetas[0] ?? '') }}
+                    style={{ backgroundColor: colorVarDePlato(plato) }}
                   />
                 ))}
               </div>
