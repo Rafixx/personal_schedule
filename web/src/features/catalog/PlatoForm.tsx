@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Ingrediente, IngredientePlato, Plato, Temporada } from '../../domain/types'
+import type { Ingrediente, IngredientePlato, Plato, Regla, Temporada } from '../../domain/types'
 import { usePlatoIngredientesReplace, usePlatoUpsert } from '../../data/queries'
 import { normalizarEtiqueta, platoFormSchema, type PlatoFormValues } from './schemas'
 import { PlatoIngredientesEditor, type LineaEditor } from './PlatoIngredientesEditor'
 
 export interface PlatoFormProps {
   plato?: Plato
+  platosExistentes: Plato[]
+  reglas: Regla[]
   ingredientesDisponibles: Ingrediente[]
   ingredientesPlato: IngredientePlato[]
   onGuardado: () => void
@@ -41,8 +43,30 @@ function lineasIguales(a: LineaEditor[], b: LineaEditor[]): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+function etiquetasSugeridas(platosExistentes: Plato[], reglas: Regla[]): string[] {
+  // Normalizar aquí, no solo al comparar: datos antiguos guardados antes de
+  // normalizarEtiqueta (o escritos fuera de este formulario) pueden traer
+  // mayúsculas o acentos, y una pill debe mostrar exactamente lo que se
+  // guardará al pulsarla — si no, "Proteína" parecería nunca estar activa
+  // aunque el campo ya contenga su forma normalizada "proteina".
+  const vistas = new Set<string>()
+  for (const p of platosExistentes) for (const e of p.etiquetas) vistas.add(normalizarEtiqueta(e))
+  for (const r of reglas) vistas.add(normalizarEtiqueta(r.etiqueta))
+  return [...vistas].sort()
+}
+
+function etiquetasTrasAlternar(actuales: string[], etiqueta: string): string {
+  const normalizada = normalizarEtiqueta(etiqueta)
+  const siguientes = actuales.includes(normalizada)
+    ? actuales.filter((e) => e !== normalizada)
+    : [...actuales, normalizada]
+  return siguientes.join(', ')
+}
+
 export function PlatoForm({
   plato,
+  platosExistentes,
+  reglas,
   ingredientesDisponibles,
   ingredientesPlato,
   onGuardado,
@@ -51,11 +75,16 @@ export function PlatoForm({
   const platoUpsert = usePlatoUpsert()
   const platoIngredientesReplace = usePlatoIngredientesReplace()
   const [lineasIniciales] = useState<LineaEditor[]>(
-    ingredientesPlato.map((ip) => ({ idIngrediente: ip.idIngrediente, cantidad: ip.cantidad, unidad: ip.unidad }))
+    ingredientesPlato.map((ip) => ({
+      idIngrediente: ip.idIngrediente,
+      cantidad: ip.cantidad,
+      unidad: ip.unidad
+    }))
   )
   const [lineas, setLineas] = useState<LineaEditor[]>(lineasIniciales)
   const [idCreado, setIdCreado] = useState<number | undefined>(undefined)
   const [errorLineas, setErrorLineas] = useState<string | null>(null)
+  const sugeridas = etiquetasSugeridas(platosExistentes, reglas)
   const {
     register,
     handleSubmit,
@@ -77,7 +106,9 @@ export function PlatoForm({
   async function onSubmit(valores: PlatoFormValues) {
     const lineaInvalida = lineas.some((l) => l.cantidad <= 0 || l.unidad.trim().length === 0)
     if (lineaInvalida) {
-      setErrorLineas('Revisa los ingredientes: la cantidad debe ser mayor que 0 y la unidad no puede estar vacía.')
+      setErrorLineas(
+        'Revisa los ingredientes: la cantidad debe ser mayor que 0 y la unidad no puede estar vacía.'
+      )
       return
     }
     setErrorLineas(null)
@@ -109,7 +140,10 @@ export function PlatoForm({
       onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800"
     >
-      <fieldset disabled={platoUpsert.isPending || platoIngredientesReplace.isPending} className="contents">
+      <fieldset
+        disabled={platoUpsert.isPending || platoIngredientesReplace.isPending}
+        className="contents"
+      >
         <div>
           <label htmlFor="plato-nombre" className="mb-1 block text-sm font-semibold">
             Nombre
@@ -131,7 +165,9 @@ export function PlatoForm({
                       checked={field.value.includes(t)}
                       onChange={(e) => {
                         field.onChange(
-                          e.target.checked ? [...field.value, t] : field.value.filter((v) => v !== t)
+                          e.target.checked
+                            ? [...field.value, t]
+                            : field.value.filter((v) => v !== t)
                         )
                       }}
                     />
@@ -141,13 +177,57 @@ export function PlatoForm({
               </div>
             )}
           />
-          {errors.temporadas && <p className="mt-1 text-sm text-red-600">{errors.temporadas.message}</p>}
+          {errors.temporadas && (
+            <p className="mt-1 text-sm text-red-600">{errors.temporadas.message}</p>
+          )}
         </div>
         <div>
           <label htmlFor="plato-etiquetas" className="mb-1 block text-sm font-semibold">
             Etiquetas (separadas por comas)
           </label>
-          <input id="plato-etiquetas" {...register('etiquetas')} className={CAMPO} placeholder="pasta, carne…" />
+          <Controller
+            name="etiquetas"
+            control={control}
+            render={({ field }) => {
+              const actuales = textoAEtiquetas(field.value)
+              return (
+                <>
+                  <input
+                    id="plato-etiquetas"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    className={CAMPO}
+                    placeholder="pasta, carne…"
+                  />
+                  {sugeridas.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {sugeridas.map((etiqueta) => {
+                        const activa = actuales.includes(etiqueta)
+                        return (
+                          <button
+                            key={etiqueta}
+                            type="button"
+                            onClick={() =>
+                              field.onChange(etiquetasTrasAlternar(actuales, etiqueta))
+                            }
+                            aria-pressed={activa}
+                            className={
+                              activa
+                                ? 'rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-neutral-900'
+                                : 'rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-neutral-300'
+                            }
+                          >
+                            {etiqueta}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )
+            }}
+          />
         </div>
         <div>
           <label htmlFor="plato-notas" className="mb-1 block text-sm font-semibold">

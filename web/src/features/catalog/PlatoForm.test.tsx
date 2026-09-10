@@ -28,7 +28,14 @@ describe('PlatoForm', () => {
     )
     const onGuardado = vi.fn()
     render(
-      <PlatoForm ingredientesDisponibles={[]} ingredientesPlato={[]} onGuardado={onGuardado} onCancelar={vi.fn()} />,
+      <PlatoForm
+        platosExistentes={[]}
+        reglas={[]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={onGuardado}
+        onCancelar={vi.fn()}
+      />,
       { wrapper }
     )
 
@@ -54,7 +61,14 @@ describe('PlatoForm', () => {
       })
     )
     render(
-      <PlatoForm ingredientesDisponibles={[]} ingredientesPlato={[]} onGuardado={vi.fn()} onCancelar={vi.fn()} />,
+      <PlatoForm
+        platosExistentes={[]}
+        reglas={[]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
       { wrapper }
     )
     await userEvent.type(screen.getByLabelText('Nombre'), 'Lentejas')
@@ -82,24 +96,47 @@ describe('PlatoForm', () => {
       })
     )
     render(
-      <PlatoForm ingredientesDisponibles={[]} ingredientesPlato={[]} onGuardado={vi.fn()} onCancelar={vi.fn()} />,
+      <PlatoForm
+        platosExistentes={[]}
+        reglas={[]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
       { wrapper }
     )
     await userEvent.type(screen.getByLabelText('Nombre'), 'Lentejas')
-    await userEvent.type(screen.getByLabelText('Etiquetas (separadas por comas)'), ' Legumbre,  Guiso ')
+    await userEvent.type(
+      screen.getByLabelText('Etiquetas (separadas por comas)'),
+      ' Legumbre,  Guiso '
+    )
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }))
     await waitFor(() =>
       expect(payloadRecibido).toEqual({
         action: 'plato.upsert',
         token: 'test-token',
-        payload: { nombre: 'Lentejas', temporada: 'TODAS', etiquetas: 'legumbre,guiso', notas: '', activo: true }
+        payload: {
+          nombre: 'Lentejas',
+          temporada: 'TODAS',
+          etiquetas: 'legumbre,guiso',
+          notas: '',
+          activo: true
+        }
       })
     )
   })
 
   it('muestra un error de validación si el nombre está vacío', async () => {
     render(
-      <PlatoForm ingredientesDisponibles={[]} ingredientesPlato={[]} onGuardado={vi.fn()} onCancelar={vi.fn()} />,
+      <PlatoForm
+        platosExistentes={[]}
+        reglas={[]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
       { wrapper }
     )
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }))
@@ -117,6 +154,8 @@ describe('PlatoForm', () => {
           notas: 'Sin sal',
           activo: true
         }}
+        platosExistentes={[]}
+        reglas={[]}
         ingredientesDisponibles={[]}
         ingredientesPlato={[]}
         onGuardado={vi.fn()}
@@ -126,6 +165,137 @@ describe('PlatoForm', () => {
     )
     expect(screen.getByLabelText('Nombre')).toHaveValue('Gazpacho')
     expect(screen.getByLabelText('Etiquetas (separadas por comas)')).toHaveValue('verdura')
+  })
+
+  it('sugiere como pills las etiquetas de otros platos y de las reglas existentes, sin duplicados', () => {
+    render(
+      <PlatoForm
+        platosExistentes={[
+          {
+            id: 1,
+            nombre: 'Gazpacho',
+            temporadas: ['VERANO'],
+            etiquetas: ['verdura'],
+            notas: '',
+            activo: true
+          },
+          {
+            id: 2,
+            nombre: 'Ensalada',
+            temporadas: ['TODAS'],
+            etiquetas: ['verdura', 'ligero'],
+            notas: '',
+            activo: true
+          }
+        ]}
+        reglas={[{ id: 1, etiqueta: 'pasta', tipo: 'MAX_SEMANA', valor: 1, activa: true }]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+      { wrapper }
+    )
+    expect(screen.getAllByRole('button', { name: 'verdura' })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'ligero' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'pasta' })).toBeInTheDocument()
+  })
+
+  it('pulsar una pill añade la etiqueta al campo de texto, y pulsarla de nuevo la quita', async () => {
+    render(
+      <PlatoForm
+        platosExistentes={[
+          {
+            id: 1,
+            nombre: 'Gazpacho',
+            temporadas: ['VERANO'],
+            etiquetas: ['verdura'],
+            notas: '',
+            activo: true
+          }
+        ]}
+        reglas={[]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+      { wrapper }
+    )
+    const pill = screen.getByRole('button', { name: 'verdura' })
+    expect(pill).toHaveAttribute('aria-pressed', 'false')
+
+    await userEvent.click(pill)
+    expect(screen.getByLabelText('Etiquetas (separadas por comas)')).toHaveValue('verdura')
+    expect(pill).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(pill)
+    expect(screen.getByLabelText('Etiquetas (separadas por comas)')).toHaveValue('')
+    expect(pill).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('una pill ya presente en el texto escrito a mano aparece activa', () => {
+    render(
+      <PlatoForm
+        platosExistentes={[
+          {
+            id: 1,
+            nombre: 'Gazpacho',
+            temporadas: ['VERANO'],
+            etiquetas: ['verdura'],
+            notas: '',
+            activo: true
+          }
+        ]}
+        reglas={[]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+      { wrapper }
+    )
+    fireEvent.change(screen.getByLabelText('Etiquetas (separadas por comas)'), {
+      target: { value: 'verdura' }
+    })
+    expect(screen.getByRole('button', { name: 'verdura' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('normaliza las pills sugeridas (mayúsculas/acentos de datos antiguos) para que coincidan con el texto ya normalizado', () => {
+    render(
+      <PlatoForm
+        plato={{
+          id: 1,
+          nombre: 'Pollo',
+          temporadas: ['TODAS'],
+          etiquetas: ['Proteína'],
+          notas: '',
+          activo: true
+        }}
+        platosExistentes={[
+          {
+            id: 1,
+            nombre: 'Pollo',
+            temporadas: ['TODAS'],
+            etiquetas: ['Proteína'],
+            notas: '',
+            activo: true
+          }
+        ]}
+        reglas={[]}
+        ingredientesDisponibles={[]}
+        ingredientesPlato={[]}
+        onGuardado={vi.fn()}
+        onCancelar={vi.fn()}
+      />,
+      { wrapper }
+    )
+    // El plato precarga "Proteína" tal cual en el texto (etiquetasATexto no normaliza),
+    // pero la pill sugerida ya está normalizada — sin la normalización de
+    // etiquetasSugeridas esta pill mostraría "Proteína" y nunca aparecería
+    // activa, aunque su forma normalizada ya esté en el campo.
+    expect(screen.queryByRole('button', { name: 'Proteína' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'proteina' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('incluye las líneas del editor de ingredientes al guardar, tras el upsert del plato', async () => {
@@ -146,7 +316,11 @@ describe('PlatoForm', () => {
     const onGuardado = vi.fn()
     render(
       <PlatoForm
-        ingredientesDisponibles={[{ id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }]}
+        platosExistentes={[]}
+        reglas={[]}
+        ingredientesDisponibles={[
+          { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
+        ]}
         ingredientesPlato={[]}
         onGuardado={onGuardado}
         onCancelar={vi.fn()}
@@ -168,8 +342,19 @@ describe('PlatoForm', () => {
   it('precarga las líneas de ingredientesPlato en el editor', () => {
     render(
       <PlatoForm
-        plato={{ id: 3, nombre: 'Gazpacho', temporadas: ['VERANO'], etiquetas: [], notas: '', activo: true }}
-        ingredientesDisponibles={[{ id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }]}
+        plato={{
+          id: 3,
+          nombre: 'Gazpacho',
+          temporadas: ['VERANO'],
+          etiquetas: [],
+          notas: '',
+          activo: true
+        }}
+        platosExistentes={[]}
+        reglas={[]}
+        ingredientesDisponibles={[
+          { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
+        ]}
         ingredientesPlato={[{ id: 1, idPlato: 3, idIngrediente: 1, cantidad: 500, unidad: 'g' }]}
         onGuardado={vi.fn()}
         onCancelar={vi.fn()}
@@ -198,6 +383,8 @@ describe('PlatoForm', () => {
     )
     render(
       <PlatoForm
+        platosExistentes={[]}
+        reglas={[]}
         ingredientesDisponibles={[
           { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
         ]}
@@ -210,7 +397,9 @@ describe('PlatoForm', () => {
     await userEvent.type(screen.getByLabelText('Nombre'), 'Lentejas')
     await userEvent.click(screen.getByRole('button', { name: /añadir ingrediente/i }))
     await userEvent.click(screen.getByRole('button', { name: /^guardar$/i }))
-    await waitFor(() => expect(screen.getByText('No se pudo guardar. Inténtalo de nuevo.')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByText('No se pudo guardar. Inténtalo de nuevo.')).toBeInTheDocument()
+    )
 
     await userEvent.click(screen.getByRole('button', { name: /^guardar$/i }))
     await waitFor(() => expect(cuerposUpsert).toHaveLength(2))
@@ -230,7 +419,16 @@ describe('PlatoForm', () => {
     const onGuardado = vi.fn()
     render(
       <PlatoForm
-        plato={{ id: 3, nombre: 'Gazpacho', temporadas: ['VERANO'], etiquetas: [], notas: '', activo: true }}
+        plato={{
+          id: 3,
+          nombre: 'Gazpacho',
+          temporadas: ['VERANO'],
+          etiquetas: [],
+          notas: '',
+          activo: true
+        }}
+        platosExistentes={[]}
+        reglas={[]}
         ingredientesDisponibles={[
           { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
         ]}
@@ -251,6 +449,8 @@ describe('PlatoForm', () => {
     server.use(http.post(API_URL, () => HttpResponse.json({ ok: true, result: { id_plato: 30 } })))
     render(
       <PlatoForm
+        platosExistentes={[]}
+        reglas={[]}
         ingredientesDisponibles={[
           { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
         ]}

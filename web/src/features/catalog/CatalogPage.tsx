@@ -52,11 +52,14 @@ export function CatalogPage() {
           {pestaña === 'platos' && (
             <PlatoList
               platos={catalogo.data.catalogo.platos}
+              reglas={catalogo.data.catalogo.reglas}
               ingredientesDisponibles={catalogo.data.catalogo.ingredientes}
               ingredientesPlato={catalogo.data.catalogo.ingredientesPlatos}
             />
           )}
-          {pestaña === 'ingredientes' && <IngredienteList ingredientes={catalogo.data.catalogo.ingredientes} />}
+          {pestaña === 'ingredientes' && (
+            <IngredienteList ingredientes={catalogo.data.catalogo.ingredientes} />
+          )}
           {pestaña === 'reglas' && <ReglaList reglas={catalogo.data.catalogo.reglas} />}
         </div>
       )}

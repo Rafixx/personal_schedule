@@ -16,13 +16,23 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 const platos: Plato[] = [
-  { id: 1, nombre: 'Gazpacho', temporadas: ['VERANO'], etiquetas: ['verdura'], notas: '', activo: true },
+  {
+    id: 1,
+    nombre: 'Gazpacho',
+    temporadas: ['VERANO'],
+    etiquetas: ['verdura'],
+    notas: '',
+    activo: true
+  },
   { id: 2, nombre: 'Cocido', temporadas: ['INVIERNO'], etiquetas: [], notas: '', activo: false }
 ]
 
 describe('PlatoList', () => {
   it('muestra cada plato con su estado activo/inactivo', () => {
-    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
+    render(
+      <PlatoList platos={platos} reglas={[]} ingredientesDisponibles={[]} ingredientesPlato={[]} />,
+      { wrapper }
+    )
     const filaGazpacho = screen.getByText('Gazpacho').closest('li')
     const filaCocido = screen.getByText('Cocido').closest('li')
     if (!filaGazpacho || !filaCocido) throw new Error('no se encontraron las filas')
@@ -31,7 +41,10 @@ describe('PlatoList', () => {
   })
 
   it('muestra las etiquetas y la temporada de cada plato, con un aviso cuando no tiene etiquetas', () => {
-    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
+    render(
+      <PlatoList platos={platos} reglas={[]} ingredientesDisponibles={[]} ingredientesPlato={[]} />,
+      { wrapper }
+    )
     const filaGazpacho = screen.getByText('Gazpacho').closest('li')
     const filaCocido = screen.getByText('Cocido').closest('li')
     if (!filaGazpacho || !filaCocido) throw new Error('no se encontraron las filas')
@@ -42,7 +55,10 @@ describe('PlatoList', () => {
   })
 
   it('abre el formulario precargado al pulsar "Editar"', async () => {
-    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
+    render(
+      <PlatoList platos={platos} reglas={[]} ingredientesDisponibles={[]} ingredientesPlato={[]} />,
+      { wrapper }
+    )
     const fila = screen.getByText('Gazpacho').closest('li')
     if (!fila) throw new Error('no se encontró la fila')
     await userEvent.click(within(fila).getByRole('button', { name: /editar/i }))
@@ -58,13 +74,20 @@ describe('PlatoList', () => {
       })
     )
     const confirmSpy = vi.spyOn(window, 'confirm')
-    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
+    render(
+      <PlatoList platos={platos} reglas={[]} ingredientesDisponibles={[]} ingredientesPlato={[]} />,
+      { wrapper }
+    )
     const fila = screen.getByText('Gazpacho').closest('li')
     if (!fila) throw new Error('no se encontró la fila')
     await userEvent.click(within(fila).getByRole('button', { name: /desactivar/i }))
     expect(confirmSpy).not.toHaveBeenCalled()
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(cuerpoRecibido).toEqual({ action: 'plato.delete', token: 'test-token', payload: { id_plato: 1 } })
+    expect(cuerpoRecibido).toEqual({
+      action: 'plato.delete',
+      token: 'test-token',
+      payload: { id_plato: 1 }
+    })
   })
 
   it('reactiva un plato inactivo llamando a plato.upsert con activo:true', async () => {
@@ -75,7 +98,10 @@ describe('PlatoList', () => {
         return HttpResponse.json({ ok: true, result: { id_plato: 2 } })
       })
     )
-    render(<PlatoList platos={platos} ingredientesDisponibles={[]} ingredientesPlato={[]} />, { wrapper })
+    render(
+      <PlatoList platos={platos} reglas={[]} ingredientesDisponibles={[]} ingredientesPlato={[]} />,
+      { wrapper }
+    )
     const fila = screen.getByText('Cocido').closest('li')
     if (!fila) throw new Error('no se encontró la fila')
     await userEvent.click(within(fila).getByRole('button', { name: /reactivar/i }))
@@ -83,7 +109,14 @@ describe('PlatoList', () => {
     expect(cuerpoRecibido).toEqual({
       action: 'plato.upsert',
       token: 'test-token',
-      payload: { id_plato: 2, nombre: 'Cocido', temporada: 'INVIERNO', etiquetas: '', notas: '', activo: true }
+      payload: {
+        id_plato: 2,
+        nombre: 'Cocido',
+        temporada: 'INVIERNO',
+        etiquetas: '',
+        notas: '',
+        activo: true
+      }
     })
   })
 
@@ -91,7 +124,10 @@ describe('PlatoList', () => {
     render(
       <PlatoList
         platos={platos}
-        ingredientesDisponibles={[{ id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }]}
+        reglas={[]}
+        ingredientesDisponibles={[
+          { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
+        ]}
         ingredientesPlato={[{ id: 1, idPlato: 1, idIngrediente: 1, cantidad: 500, unidad: 'g' }]}
       />,
       { wrapper }
@@ -106,7 +142,10 @@ describe('PlatoList', () => {
     render(
       <PlatoList
         platos={platos}
-        ingredientesDisponibles={[{ id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }]}
+        reglas={[]}
+        ingredientesDisponibles={[
+          { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['TODAS'] }
+        ]}
         ingredientesPlato={[{ id: 1, idPlato: 999, idIngrediente: 1, cantidad: 500, unidad: 'g' }]}
       />,
       { wrapper }

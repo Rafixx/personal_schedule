@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import type { Ingrediente, IngredientePlato, Plato, Temporada } from '../../domain/types'
+import type { Ingrediente, IngredientePlato, Plato, Regla, Temporada } from '../../domain/types'
 import { usePlatoDelete, usePlatoUpsert } from '../../data/queries'
 import { colorVarDePlato } from '../../shared/tagColors'
 import { PlatoForm } from './PlatoForm'
 
 export interface PlatoListProps {
   platos: Plato[]
+  reglas: Regla[]
   ingredientesDisponibles: Ingrediente[]
   ingredientesPlato: IngredientePlato[]
 }
@@ -23,7 +24,12 @@ function textoTemporadas(temporadas: Temporada[]): string {
   return temporadas.map((t) => NOMBRE_TEMPORADA[t]).join(', ')
 }
 
-export function PlatoList({ platos, ingredientesDisponibles, ingredientesPlato }: PlatoListProps) {
+export function PlatoList({
+  platos,
+  reglas,
+  ingredientesDisponibles,
+  ingredientesPlato
+}: PlatoListProps) {
   const [editando, setEditando] = useState<Plato | 'nuevo' | null>(null)
   const platoDelete = usePlatoDelete()
   const platoUpsert = usePlatoUpsert()
@@ -48,6 +54,8 @@ export function PlatoList({ platos, ingredientesDisponibles, ingredientesPlato }
     return (
       <PlatoForm
         plato={plato}
+        platosExistentes={platos}
+        reglas={reglas}
         ingredientesDisponibles={ingredientesDisponibles}
         ingredientesPlato={plato ? ingredientesPlato.filter((ip) => ip.idPlato === plato.id) : []}
         onGuardado={() => setEditando(null)}

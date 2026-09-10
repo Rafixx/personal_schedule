@@ -523,19 +523,20 @@ la tablet real.
 
 ## Pendiente (ideas anotadas para después)
 
-- **Autocompletado de etiquetas en `PlatoForm` con pills como sugerencia,
-  no como única opción.** Surgió al plantear si el campo "Etiquetas" de
-  `PlatoForm.tsx` (hoy texto libre) debería restringirse a pills de las
-  etiquetas que ya tienen una regla en Reglas. Restringirlo así perdería
-  funcionalidad real: hoy se puede etiquetar un plato para organizarlo o
-  colorearlo (vía `colorVarDePlato`) sin que exista todavía una regla
-  sobre esa etiqueta, y si más adelante se borra una regla (borrado
-  físico, ya implementado así) los platos que ya tenían esa etiqueta la
-  conservarían pero dejaría de poder asignarse a platos nuevos —una
-  etiqueta huérfana confusa. La mejora real es añadir autocompletado con
-  pills sugeridas (etiquetas ya usadas por otros platos + las de las
-  reglas existentes) sin dejar de permitir texto libre, para reducir
-  errores de typo/inconsistencia (`"verdura"` vs `"verduras"`) que
-  `normalizarEtiqueta` no cubre (solo normaliza mayúsculas/acentos, no
-  sinónimos), sin perder la libertad de crear categorías nuevas antes de
-  que exista una regla sobre ellas.
+- ~~Autocompletado de etiquetas en `PlatoForm` con pills como sugerencia,
+  no como única opción.~~ **Implementado (2026-09-10).** Se descartó
+  restringir el campo a pills de reglas existentes (perdería la
+  posibilidad de etiquetar un plato antes de que exista una regla sobre
+  esa etiqueta, y crearía etiquetas huérfanas si la regla se borra).
+  `PlatoForm.tsx` mantiene el texto libre y añade `etiquetasSugeridas()`
+  (etiquetas de todos los platos del catálogo + las de las reglas
+  existentes, normalizadas y deduplicadas) como pills debajo del campo —
+  pulsar una la añade o la quita del texto (`Controller` sobre
+  `etiquetas`, sin `watch`/`setValue` para no arrastrar el aviso de
+  `oxlint` sobre APIs incompatibles con memoización). `platosExistentes`
+  y `reglas` se enhebran desde `CatalogPage` → `PlatoList` → `PlatoForm`.
+  Hallazgo al verificar visualmente: sin normalizar las propias pills
+  sugeridas, una etiqueta guardada con mayúsculas/acentos (datos previos
+  a `normalizarEtiqueta`, p. ej. "Proteína") nunca aparecía activa aunque
+  su forma normalizada ya estuviera en el campo — corregido normalizando
+  en `etiquetasSugeridas()`, no solo al comparar.
