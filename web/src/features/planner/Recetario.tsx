@@ -48,6 +48,7 @@ function DishChipArrastrable({ plato }: { plato: Plato }) {
       {...atributosSinFoco}
       {...listeners}
       aria-label={`Arrastrar ${plato.nombre}`}
+      className="touch-manipulation"
       style={{ opacity: isDragging ? 0.4 : 1 }}
     >
       <DishChip plato={plato} />

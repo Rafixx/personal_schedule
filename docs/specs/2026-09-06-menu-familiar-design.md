@@ -451,8 +451,18 @@ cuando el arrastre viene del Recetario, no hace nada.
 
 **Sensores:** `TouchSensor` con `activationConstraint: {delay: 200, tolerance:
 8}` (necesario para que el scroll táctil y el arrastre no compitan en la
-tablet de cocina) + `PointerSensor` con `activationConstraint: {distance: 8}`
-(ratón/trackpad en desarrollo). Un único `<DndContext>` envuelve el `<main>`
+tablet de cocina) + `MouseSensor` (no `PointerSensor`) con
+`activationConstraint: {distance: 8}` (ratón/trackpad en desarrollo).
+**No usar `PointerSensor` junto a `TouchSensor`**: un toque real dispara
+tanto `pointerdown` como `touchstart` para el mismo gesto, así que ambos
+sensores compiten por él — `PointerSensor`, sin espera, gana casi siempre
+antes de que `TouchSensor` llegue a activarse, rompiendo el "mantener
+pulsado" en dispositivos táctiles reales (la documentación oficial de
+`dnd-kit` ya avisa de esto: Mouse+Touch es la alternativa a usar **en vez
+de** Pointer, no junto a él). Los elementos arrastrables llevan además
+`touch-action: manipulation` (recomendación oficial para `TouchSensor`),
+para que nada bloquee de forma poco fiable el scroll nativo. Un único
+`<DndContext>` envuelve el `<main>`
 de `PlannerPage` que ya contiene `WeekBoard` y `Recetario` lado a lado —
 necesario porque el arrastre cruza de uno a otro.
 
@@ -502,6 +512,14 @@ correctamente `WeekBoard` y `Recetario` dentro de `PlannerPage`.
 (`resolverArrastre`, testeada); `useMovePlanEntry` optimista y `moverPlato` en
 `useWeekPlan`; `Recetario`/`Slot` como arrastrable/destino vía `@dnd-kit/core`;
 `DndContext`/`DragOverlay`/sensores en `PlannerPage`.
+
+**Corrección (2026-09-10):** verificado en tablet real que el arrastre no
+funcionaba en táctil (sí con ratón). Causa raíz: `PointerSensor` y
+`TouchSensor` registrados a la vez competían por el mismo gesto táctil —
+ver el detalle en "Sensores" más arriba. Corregido sustituyendo
+`PointerSensor` por `MouseSensor` y añadiendo `touch-action: manipulation`
+a los elementos arrastrables. Pendiente de que el usuario reverifique en
+la tablet real.
 
 ## Pendiente (ideas anotadas para después)
 

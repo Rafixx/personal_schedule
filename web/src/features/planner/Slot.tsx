@@ -58,7 +58,7 @@ function DishTileArrastrable({ asignacion, onQuitar }: DishTileArrastrableProps)
       {...atributosSinFoco}
       {...listeners}
       aria-label={`Arrastrar ${plato.nombre}`}
-      className="flex flex-1"
+      className="flex flex-1 touch-manipulation"
       style={{ opacity: isDragging ? 0.4 : 1 }}
     >
       <DishTile plato={plato} fecha={asignacion.fecha} onQuitar={onQuitar} />

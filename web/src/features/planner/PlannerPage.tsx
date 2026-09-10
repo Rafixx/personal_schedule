@@ -4,7 +4,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -42,8 +42,15 @@ export function PlannerPage({ lunes, setLunes, vista, setVista }: PlannerPagePro
   const semana = useWeekPlan(lunes)
   const mes = useMonthPlan(lunes)
 
+  // MouseSensor (no PointerSensor) + TouchSensor a propósito: Pointer Events se
+  // disparan también para toques reales, así que un PointerSensor y un
+  // TouchSensor registrados a la vez compiten por el mismo gesto táctil — el
+  // PointerSensor (sin espera, solo distancia) gana casi siempre antes de que
+  // el TouchSensor llegue a activarse, rompiendo el "mantener pulsado" pensado
+  // para no chocar con el scroll táctil. MouseSensor solo reacciona a ratón
+  // real, así que deja el toque enteramente al TouchSensor.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   )
 

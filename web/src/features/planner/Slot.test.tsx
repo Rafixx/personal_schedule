@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, MouseSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { ReactNode } from 'react'
 import { Slot } from './Slot'
 import type { AsignacionSemana } from '../../domain/reglas'
 import type { Plato } from '../../domain/types'
 
 function ConDndContext({ children }: { children: ReactNode }) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 8 } }))
   return <DndContext sensors={sensors}>{children}</DndContext>
 }
 
@@ -52,6 +52,12 @@ describe('Slot', () => {
     const arrastrable = screen.getByLabelText('Arrastrar Pasta')
     expect(arrastrable).not.toHaveAttribute('role')
     expect(arrastrable).not.toHaveAttribute('tabindex')
+  })
+
+  it('marca el arrastrable con touch-action: manipulation para no competir con el scroll táctil', () => {
+    const asignacion: AsignacionSemana = { fecha: '2026-09-07', orden: 1, plato: plato() }
+    render(<Slot asignacion={asignacion} etiquetaHueco="Primero" onAbrirPicker={vi.fn()} onQuitar={vi.fn()} />)
+    expect(screen.getByLabelText('Arrastrar Pasta')).toHaveClass('touch-manipulation')
   })
 
   it('el botón de quitar sigue funcionando envuelto en el arrastrable, dentro de un DndContext real', async () => {

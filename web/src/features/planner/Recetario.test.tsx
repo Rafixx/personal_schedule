@@ -34,4 +34,9 @@ describe('Recetario', () => {
     expect(arrastrable).not.toHaveAttribute('role')
     expect(arrastrable).not.toHaveAttribute('tabindex')
   })
+
+  it('marca el arrastrable con touch-action: manipulation para no competir con el scroll táctil', () => {
+    render(<Recetario platos={[plato(1, 'Gazpacho')]} />)
+    expect(screen.getByLabelText('Arrastrar Gazpacho')).toHaveClass('touch-manipulation')
+  })
 })
