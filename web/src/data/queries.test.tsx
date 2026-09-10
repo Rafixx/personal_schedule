@@ -48,6 +48,36 @@ describe('useCatalogo', () => {
     expect(result.current.data?.filasInvalidas).toBe(1)
     expect(result.current.data?.erroresPorColeccion.platos).toHaveLength(1)
   })
+
+  it('ordena los platos y los ingredientes alfabéticamente, sin importar el orden de la hoja', async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json({
+          ok: true,
+          platos: [
+            { id_plato: 1, nombre: 'Zanahorias asadas', temporada: 'TODAS', etiquetas: '', notas: '', activo: true },
+            { id_plato: 2, nombre: 'Ñoquis', temporada: 'TODAS', etiquetas: '', notas: '', activo: true },
+            { id_plato: 3, nombre: 'Ensalada', temporada: 'TODAS', etiquetas: '', notas: '', activo: true }
+          ],
+          ingredientes: [
+            { id_ingrediente: 1, nombre: 'Tomate', proveedor: 'Frutería', unidad_base: 'g', temporada: 'TODAS' },
+            { id_ingrediente: 2, nombre: 'Arroz', proveedor: 'Ultramarinos', unidad_base: 'g', temporada: 'TODAS' }
+          ],
+          ingredientesPlatos: [],
+          reglas: [],
+          proveedores: []
+        })
+      )
+    )
+    const { result } = renderHook(() => useCatalogo(), { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.catalogo.platos.map((p) => p.nombre)).toEqual([
+      'Ensalada',
+      'Ñoquis',
+      'Zanahorias asadas'
+    ])
+    expect(result.current.data?.catalogo.ingredientes.map((i) => i.nombre)).toEqual(['Arroz', 'Tomate'])
+  })
 })
 
 describe('useSetPlanEntry', () => {

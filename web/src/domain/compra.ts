@@ -56,7 +56,7 @@ export function calcularCompra(plan: PlanEntry[], catalogo: Catalogo): ListaComp
     .sort(([a], [b]) => (ordenPorProveedor.get(a) ?? Infinity) - (ordenPorProveedor.get(b) ?? Infinity))
     .map(([proveedor, lineas]) => ({
       proveedor,
-      lineas: lineas.sort((a, b) => a.nombre.localeCompare(b.nombre))
+      lineas: lineas.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
     }))
 }
 

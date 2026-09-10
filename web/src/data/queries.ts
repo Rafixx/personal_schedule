@@ -44,8 +44,14 @@ async function fetchCatalogo(): Promise<CatalogoConAvisos> {
   const proveedores = parseRows(proveedorRowSchema, envelope.proveedores)
   return {
     catalogo: {
-      platos: platos.valid.map(mapPlato),
-      ingredientes: ingredientes.valid.map(mapIngrediente),
+      // Ordenados por nombre aquí, en el único sitio donde se construye el
+      // catálogo: así todas las listas de platos e ingredientes de la app
+      // (Catálogo, Recetario, selector de plato, editor de ingredientes de
+      // un plato...) salen alfabéticas sin tener que ordenar en cada una.
+      platos: platos.valid.map(mapPlato).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+      ingredientes: ingredientes.valid
+        .map(mapIngrediente)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
       ingredientesPlatos: ingredientesPlatos.valid.map(mapIngredientePlato),
       reglas: reglas.valid.map(mapRegla),
       proveedores: proveedores.valid.map(mapProveedor)
