@@ -247,7 +247,11 @@ function doPost(e) {
 
   ensureSchema_()
   var lock = LockService.getScriptLock()
-  lock.waitLock(10000)
+  try {
+    lock.waitLock(10000)
+  } catch (err) {
+    return errorOutput_('BUSY', 'inténtalo de nuevo')
+  }
   try {
     var result = routeAction_(body.action, body.payload || {}, sesion)
     return jsonOutput_({ ok: true, result: result })
@@ -422,7 +426,7 @@ function compraMarcar_(payload) {
   var existente = findRow_(SHEET_NAMES.COMPRA_MARCAS, function (m) {
     return normalizeFecha_(m.semana) === payload.semana &&
       String(m.id_ingrediente) === String(payload.id_ingrediente) &&
-      m.unidad === payload.unidad
+      String(m.unidad || '') === String(payload.unidad || '')
   })
   if (payload.comprado) {
     if (existente) return { comprado: true }
