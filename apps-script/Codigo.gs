@@ -11,7 +11,9 @@ var SHEET_NAMES = {
   INGREDIENTES_PLATOS: 'ingredientes_platos',
   PLAN: 'plan',
   REGLAS: 'reglas',
-  PROVEEDORES: 'proveedores'
+  PROVEEDORES: 'proveedores',
+  USUARIOS: 'usuarios',
+  SESIONES: 'sesiones'
 }
 
 var SCHEMA = {
@@ -23,7 +25,15 @@ var SCHEMA = {
   ingredientes_platos: ['id', 'id_plato', 'id_ingrediente', 'cantidad', 'unidad'],
   plan: ['id', 'fecha', 'turno', 'orden', 'id_plato', 'notas'],
   reglas: ['id', 'etiqueta', 'tipo', 'valor', 'activa'],
-  proveedores: ['nombre', 'orden']
+  proveedores: ['nombre', 'orden'],
+  usuarios: [
+    'id_usuario', 'nombre', 'pin_hash', 'pin_salt', 'pin_iteraciones',
+    'activo', 'intentos_fallidos', 'bloqueado_hasta', 'ultimo_login'
+  ],
+  sesiones: [
+    'id_sesion', 'id_usuario', 'token_hash', 'dispositivo', 'creado_en',
+    'ultimo_uso', 'activa', 'revocado_en'
+  ]
 }
 
 // ---------- Helpers de hoja ----------
@@ -45,10 +55,20 @@ function ensureSchema_() {
       sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     }
   })
-  var planSheet = getSheet_(SHEET_NAMES.PLAN)
-  var fechaCol = SCHEMA.plan.indexOf('fecha') + 1
-  var maxRows = Math.max(planSheet.getMaxRows() - 1, 1)
-  planSheet.getRange(2, fechaCol, maxRows, 1).setNumberFormat('@')
+  // Forzar formato texto '@' en columnas donde un valor casualmente
+  // numérico (todo dígitos) haría que Sheets lo coaccionara a número y
+  // perdiera ceros a la izquierda (fechas ISO, hashes, tokens).
+  formatearColumnaTexto_(SHEET_NAMES.PLAN, 'fecha')
+  formatearColumnaTexto_(SHEET_NAMES.USUARIOS, 'pin_hash')
+  formatearColumnaTexto_(SHEET_NAMES.USUARIOS, 'pin_salt')
+  formatearColumnaTexto_(SHEET_NAMES.SESIONES, 'token_hash')
+}
+
+function formatearColumnaTexto_(hoja, columna) {
+  var sheet = getSheet_(hoja)
+  var col = SCHEMA[hoja].indexOf(columna) + 1
+  var maxRows = Math.max(sheet.getMaxRows() - 1, 1)
+  sheet.getRange(2, col, maxRows, 1).setNumberFormat('@')
 }
 
 function fraccionDesdeFecha_(fecha) {
@@ -415,4 +435,382 @@ function adminMigrate_() {
     })
 
   return report
+}
+
+// ---------- Autenticación: configuración ----------
+//
+// NOTA: estas primitivas todavía no están conectadas a doGet/doPost/routeAction_
+// (eso es una tarea aparte). Por ahora solo existen para poder crear usuarios
+// y probar auth.login / auth.usuarios / auth.logout de forma aislada.
+
+var AUTH = {
+  ITERACIONES_PIN: 1000,
+  MAX_INTENTOS: 5,
+  BLOQUEO_BASE_MS: 15 * 60 * 1000,
+  BLOQUEO_MAX_MS: 60 * 60 * 1000, // tope de 1h: con 10^6 PIN posibles ya es disuasorio
+  CACHE_SESION_S: 300,
+  CACHE_USUARIOS_S: 300
+}
+
+// ---------- Autenticación: primitivas criptográficas ----------
+
+// Memoizado a nivel de módulo: sin esto, derivarPin_ haría una lectura de
+// PropertiesService por iteración (1000 RPC = varios segundos por login).
+var PEPPER_MEMO = null
+
+function getPepper_() {
+  if (PEPPER_MEMO) return PEPPER_MEMO
+  var pepper = PropertiesService.getScriptProperties().getProperty('AUTH_PEPPER')
+  if (!pepper) throw new Error('falta AUTH_PEPPER: ejecuta adminInicializarAuth una vez')
+  PEPPER_MEMO = pepper
+  return pepper
+}
+
+// Los Byte[] de Apps Script vienen con signo (-128..127): sin normalizar
+// a 0..255 el hex sale corrupto.
+function bytesAHex_(bytes) {
+  var hex = ''
+  for (var i = 0; i < bytes.length; i++) {
+    var b = (bytes[i] + 256) % 256
+    hex += (b < 16 ? '0' : '') + b.toString(16)
+  }
+  return hex
+}
+
+function hmacHex_(mensaje) {
+  return bytesAHex_(
+    Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, mensaje, getPepper_())
+  )
+}
+
+// KDF casero: no hay PBKDF2 en Apps Script. Iterar HMAC con el pepper como
+// clave es lo más parecido que se puede montar con Utilities.
+function derivarPin_(pin, salt, iteraciones) {
+  var acc = 'pin:' + salt + ':' + pin
+  for (var i = 0; i < iteraciones; i++) acc = hmacHex_(acc)
+  return acc
+}
+
+// El token tiene ~244 bits de entropía: una sola pasada basta, no hay
+// nada que fuerza-brutear.
+function hashToken_(token) {
+  return hmacHex_('tok:' + token)
+}
+
+function nuevoSecreto_() {
+  return (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '')
+}
+
+function comparaSegura_(a, b) {
+  var sa = String(a)
+  var sb = String(b)
+  if (sa.length !== sb.length) return false
+  var diff = 0
+  for (var i = 0; i < sa.length; i++) diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i)
+  return diff === 0
+}
+
+// Sheets devuelve `true`, `'TRUE'` o incluso `''` según cómo se haya
+// escrito la celda (checkbox vs texto vs valor por defecto).
+function esVerdadero_(valor) {
+  return valor === true || valor === 1 || String(valor).toLowerCase() === 'true'
+}
+
+function ahoraIso_() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss")
+}
+
+// Función de calibración (Step 3 del brief): ejecutar a mano desde el editor
+// de Apps Script, mirar el Logger y fijar AUTH.ITERACIONES_PIN en el mayor
+// valor que quede por debajo de ~400ms.
+function benchPin() {
+  var salt = nuevoSecreto_()
+  var candidatos = [100, 500, 1000, 2000, 5000]
+  candidatos.forEach(function (n) {
+    var t0 = Date.now()
+    derivarPin_('123456', salt, n)
+    Logger.log(n + ' iteraciones: ' + (Date.now() - t0) + ' ms')
+  })
+}
+
+// ---------- Autenticación: bloqueo por intentos fallidos ----------
+
+function cachearBloqueo_(idUsuario, hasta) {
+  var segundos = Math.ceil((hasta - Date.now()) / 1000)
+  if (segundos <= 0) return
+  CacheService.getScriptCache().put('bloq:' + idUsuario, String(hasta), Math.min(segundos, 21600))
+}
+
+function respuestaBloqueado_(hasta) {
+  return {
+    ok: false,
+    code: 'LOCKED_OUT',
+    error: 'demasiados intentos fallidos',
+    reintentar_en_s: Math.max(Math.ceil((hasta - Date.now()) / 1000), 1)
+  }
+}
+
+function escribirUsuario_(usuario, cambios) {
+  var fila = SCHEMA.usuarios.map(function (col) {
+    return Object.prototype.hasOwnProperty.call(cambios, col) ? cambios[col] : usuario[col]
+  })
+  writeRow_(SHEET_NAMES.USUARIOS, SCHEMA.usuarios, usuario._row, fila)
+}
+
+function registrarFallo_(usuario) {
+  var fallos = (Number(usuario.intentos_fallidos) || 0) + 1
+  var bloqueadoHasta = 0
+  if (fallos >= AUTH.MAX_INTENTOS) {
+    var exceso = fallos - AUTH.MAX_INTENTOS
+    var espera = Math.min(AUTH.BLOQUEO_BASE_MS * Math.pow(2, exceso), AUTH.BLOQUEO_MAX_MS)
+    bloqueadoHasta = Date.now() + espera
+    cachearBloqueo_(String(usuario.id_usuario), bloqueadoHasta)
+  }
+  escribirUsuario_(usuario, { intentos_fallidos: fallos, bloqueado_hasta: bloqueadoHasta })
+}
+
+function registrarExito_(usuario) {
+  CacheService.getScriptCache().remove('bloq:' + usuario.id_usuario)
+  escribirUsuario_(usuario, { intentos_fallidos: 0, bloqueado_hasta: 0, ultimo_login: ahoraIso_() })
+}
+
+// ---------- Autenticación: sesiones ----------
+
+function cachearSesion_(tokenHash, sesion) {
+  CacheService.getScriptCache().put('ses:' + tokenHash, JSON.stringify(sesion), AUTH.CACHE_SESION_S)
+}
+
+function autenticar_(token) {
+  if (!token || typeof token !== 'string' || token.length < 32) return null
+  var hash = hashToken_(token)
+  var cache = CacheService.getScriptCache()
+  var enCache = cache.get('ses:' + hash)
+  if (enCache) return JSON.parse(enCache)
+
+  var fila = findRow_(SHEET_NAMES.SESIONES, function (s) {
+    return esVerdadero_(s.activa) && comparaSegura_(String(s.token_hash), hash)
+  })
+  if (!fila) return null
+  var usuario = findRow_(SHEET_NAMES.USUARIOS, function (u) {
+    return String(u.id_usuario) === String(fila.id_usuario)
+  })
+  if (!usuario || !esVerdadero_(usuario.activo)) return null
+
+  var sesion = {
+    id_sesion: Number(fila.id_sesion),
+    id_usuario: Number(fila.id_usuario),
+    nombre: String(usuario.nombre)
+  }
+  cachearSesion_(hash, sesion)
+  tocarSesion_(fila)
+  return sesion
+}
+
+// Actualiza ultimo_uso como mucho una vez cada 6h por sesión: escribirlo en
+// cada petición sería una escritura por request y contención del lock.
+function tocarSesion_(fila) {
+  var cache = CacheService.getScriptCache()
+  var clave = 'uso:' + fila.id_sesion
+  if (cache.get(clave)) return
+  cache.put(clave, '1', 21600)
+  var col = SCHEMA.sesiones.indexOf('ultimo_uso') + 1
+  getSheet_(SHEET_NAMES.SESIONES).getRange(fila._row, col).setValue(ahoraIso_())
+}
+
+function crearSesion_(usuario, token, dispositivo) {
+  var id = nextId_(SHEET_NAMES.SESIONES, 'id_sesion')
+  var hash = hashToken_(token)
+  var etiqueta = String(dispositivo || 'dispositivo').substring(0, 60)
+  appendRow_(SHEET_NAMES.SESIONES,
+    [id, usuario.id_usuario, hash, etiqueta, ahoraIso_(), ahoraIso_(), true, ''])
+  cachearSesion_(hash, {
+    id_sesion: id,
+    id_usuario: Number(usuario.id_usuario),
+    nombre: String(usuario.nombre)
+  })
+  return { id_sesion: id }
+}
+
+function revocarFilaSesion_(fila) {
+  if (!esVerdadero_(fila.activa)) return false
+  var valores = SCHEMA.sesiones.map(function (col) {
+    if (col === 'activa') return false
+    if (col === 'revocado_en') return ahoraIso_()
+    return fila[col]
+  })
+  writeRow_(SHEET_NAMES.SESIONES, SCHEMA.sesiones, fila._row, valores)
+  // La revocación es inmediata porque la clave de caché se deriva del
+  // token_hash, que sí tenemos en la hoja (nunca del token en claro).
+  var cache = CacheService.getScriptCache()
+  cache.remove('ses:' + String(fila.token_hash))
+  cache.remove('uso:' + fila.id_sesion)
+  return true
+}
+
+function exigirSesion_(sesion) {
+  if (!sesion) throw new Error('esta acción requiere iniciar sesión')
+  return sesion
+}
+
+// ---------- Autenticación: acciones ----------
+
+function login_(payload) {
+  var idUsuario = String(payload.id_usuario || '')
+  var pin = String(payload.pin || '')
+  var generico = { ok: false, code: 'INVALID_CREDENTIALS', error: 'usuario o PIN incorrectos' }
+  if (!idUsuario || !/^[0-9]{6}$/.test(pin)) return generico
+
+  // Camino rápido: rechaza un bloqueo vigente sin abrir la hoja de cálculo.
+  var enCache = CacheService.getScriptCache().get('bloq:' + idUsuario)
+  if (enCache && Number(enCache) > Date.now()) return respuestaBloqueado_(Number(enCache))
+
+  ensureSchema_()
+  var usuario = findRow_(SHEET_NAMES.USUARIOS, function (u) {
+    return String(u.id_usuario) === idUsuario
+  })
+  if (!usuario || !esVerdadero_(usuario.activo) || !usuario.pin_hash) return generico
+
+  var bloqueadoHasta = Number(usuario.bloqueado_hasta) || 0
+  if (bloqueadoHasta > Date.now()) {
+    cachearBloqueo_(idUsuario, bloqueadoHasta)
+    return respuestaBloqueado_(bloqueadoHasta)
+  }
+
+  var iteraciones = Number(usuario.pin_iteraciones) || AUTH.ITERACIONES_PIN
+  if (!comparaSegura_(derivarPin_(pin, String(usuario.pin_salt), iteraciones), String(usuario.pin_hash))) {
+    registrarFallo_(usuario)
+    return generico
+  }
+
+  registrarExito_(usuario)
+  var token = nuevoSecreto_()
+  var sesion = crearSesion_(usuario, token, payload.dispositivo)
+  return {
+    ok: true,
+    token: token,
+    usuario: { id_usuario: Number(usuario.id_usuario), nombre: String(usuario.nombre) },
+    id_sesion: sesion.id_sesion
+  }
+}
+
+// GET público: solo id_usuario y nombre de los activos, para pintar el
+// selector de usuario antes de iniciar sesión. Cacheado para que un
+// bombardeo anónimo no abra el spreadsheet en cada petición.
+function listaUsuariosPublica_() {
+  var cache = CacheService.getScriptCache()
+  var enCache = cache.get('usuarios:lista')
+  if (enCache) return JSON.parse(enCache)
+  var lista = sheetToObjects_(SHEET_NAMES.USUARIOS)
+    .filter(function (u) { return esVerdadero_(u.activo) })
+    .map(function (u) { return { id_usuario: Number(u.id_usuario), nombre: String(u.nombre) } })
+  cache.put('usuarios:lista', JSON.stringify(lista), AUTH.CACHE_USUARIOS_S)
+  return lista
+}
+
+function authLogout_(payload, sesion) {
+  exigirSesion_(sesion)
+  var fila = findRow_(SHEET_NAMES.SESIONES, function (s) {
+    return String(s.id_sesion) === String(sesion.id_sesion)
+  })
+  return { revocadas: fila && revocarFilaSesion_(fila) ? 1 : 0 }
+}
+
+// ---------- Autenticación: administración (ejecutar a mano desde el editor) ----------
+
+function adminInicializarAuth() {
+  ensureSchema_()
+  var props = PropertiesService.getScriptProperties()
+  if (!props.getProperty('AUTH_PEPPER')) {
+    props.setProperty('AUTH_PEPPER', Utilities.base64Encode(Utilities.computeDigest(
+      Utilities.DigestAlgorithm.SHA_256,
+      Utilities.getUuid() + Utilities.getUuid() + String(Date.now())
+    )))
+    Logger.log('AUTH_PEPPER creado')
+  } else {
+    Logger.log('AUTH_PEPPER ya existía; NO lo regeneres: invalidaría todos los PIN y sesiones')
+  }
+  Logger.log('hojas usuarios/sesiones listas')
+}
+
+function adminSetPin() {
+  var props = PropertiesService.getScriptProperties()
+  var nombre = String(props.getProperty('ADMIN_NOMBRE') || '').trim()
+  var pin = String(props.getProperty('ADMIN_PIN') || '').trim()
+  try {
+    if (!nombre) throw new Error('define ADMIN_NOMBRE en Propiedades del script')
+    if (!/^[0-9]{6}$/.test(pin)) throw new Error('ADMIN_PIN debe tener 6 dígitos')
+    ensureSchema_()
+    var existente = findRow_(SHEET_NAMES.USUARIOS, function (u) {
+      return String(u.nombre).trim().toLowerCase() === nombre.toLowerCase()
+    })
+    var salt = nuevoSecreto_()
+    var hash = derivarPin_(pin, salt, AUTH.ITERACIONES_PIN)
+    if (existente) {
+      escribirUsuario_(existente, {
+        pin_hash: hash, pin_salt: salt, pin_iteraciones: AUTH.ITERACIONES_PIN,
+        activo: true, intentos_fallidos: 0, bloqueado_hasta: 0
+      })
+      var revocadas = revocarSesionesDeUsuario_(existente.id_usuario, 0)
+      Logger.log('PIN actualizado: ' + nombre + ' (id ' + existente.id_usuario +
+        '), ' + revocadas + ' sesiones revocadas')
+    } else {
+      var id = nextId_(SHEET_NAMES.USUARIOS, 'id_usuario')
+      appendRow_(SHEET_NAMES.USUARIOS,
+        [id, nombre, hash, salt, AUTH.ITERACIONES_PIN, true, 0, 0, ''])
+      Logger.log('usuario creado: ' + nombre + ' (id ' + id + ')')
+    }
+    CacheService.getScriptCache().remove('usuarios:lista')
+  } finally {
+    // Aunque haya fallado: el PIN no se queda dando vueltas por el almacén.
+    props.deleteProperty('ADMIN_PIN')
+    props.deleteProperty('ADMIN_NOMBRE')
+  }
+}
+
+function revocarSesionesDeUsuario_(idUsuario, exceptoIdSesion) {
+  var revocadas = 0
+  sheetToObjects_(SHEET_NAMES.SESIONES).forEach(function (s) {
+    if (String(s.id_usuario) !== String(idUsuario)) return
+    if (exceptoIdSesion && String(s.id_sesion) === String(exceptoIdSesion)) return
+    if (revocarFilaSesion_(s)) revocadas++
+  })
+  return revocadas
+}
+
+function adminDesbloquearUsuario() {
+  var ID_USUARIO = 1 // edita este valor antes de ejecutar
+  var usuario = findRow_(SHEET_NAMES.USUARIOS, function (u) {
+    return String(u.id_usuario) === String(ID_USUARIO)
+  })
+  if (!usuario) throw new Error('usuario no encontrado: ' + ID_USUARIO)
+  CacheService.getScriptCache().remove('bloq:' + ID_USUARIO)
+  escribirUsuario_(usuario, { intentos_fallidos: 0, bloqueado_hasta: 0 })
+  Logger.log('desbloqueado: ' + usuario.nombre)
+}
+
+function adminDesactivarUsuario() {
+  var ID_USUARIO = 1 // edita este valor antes de ejecutar
+  var usuario = findRow_(SHEET_NAMES.USUARIOS, function (u) {
+    return String(u.id_usuario) === String(ID_USUARIO)
+  })
+  if (!usuario) throw new Error('usuario no encontrado: ' + ID_USUARIO)
+  escribirUsuario_(usuario, { activo: false })
+  CacheService.getScriptCache().remove('usuarios:lista')
+  Logger.log('desactivado ' + usuario.nombre + '; sesiones revocadas: ' +
+    revocarSesionesDeUsuario_(ID_USUARIO, 0))
+}
+
+function adminPurgarSesiones() {
+  var DIAS = 90
+  var sheet = getSheet_(SHEET_NAMES.SESIONES)
+  var limite = Utilities.formatDate(new Date(Date.now() - DIAS * 86400000),
+    Session.getScriptTimeZone(), 'yyyy-MM-dd')
+  var borradas = 0
+  sheetToObjects_(SHEET_NAMES.SESIONES)
+    .filter(function (s) {
+      return !esVerdadero_(s.activa) && String(s.ultimo_uso).substring(0, 10) < limite
+    })
+    .sort(function (a, b) { return b._row - a._row })
+    .forEach(function (s) { sheet.deleteRow(s._row); borradas++ })
+  Logger.log('sesiones purgadas: ' + borradas)
 }
