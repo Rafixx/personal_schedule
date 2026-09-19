@@ -1,6 +1,7 @@
 /**
  * API del planificador de menú familiar sobre Google Sheets.
- * Lectura vía doGet, escritura vía doPost con token compartido.
+ * Lectura vía doGet, escritura vía doPost; ambas exigen una sesión
+ * válida (ver autenticar_) salvo auth.usuarios y auth.login.
  * Cada escritura corre bajo LockService para evitar carreras entre
  * peticiones simultáneas desde varios dispositivos.
  */
@@ -13,7 +14,8 @@ var SHEET_NAMES = {
   REGLAS: 'reglas',
   PROVEEDORES: 'proveedores',
   USUARIOS: 'usuarios',
-  SESIONES: 'sesiones'
+  SESIONES: 'sesiones',
+  COMPRA_MARCAS: 'compra_marcas'
 }
 
 var SCHEMA = {
@@ -33,7 +35,8 @@ var SCHEMA = {
   sesiones: [
     'id_sesion', 'id_usuario', 'token_hash', 'dispositivo', 'creado_en',
     'ultimo_uso', 'activa', 'revocado_en'
-  ]
+  ],
+  compra_marcas: ['id', 'semana', 'id_ingrediente', 'unidad']
 }
 
 // ---------- Helpers de hoja ----------
@@ -45,7 +48,7 @@ function getSheet_(name) {
   return sheet
 }
 
-function ensureSchema_() {
+function ensureSchemaForzado_() {
   Object.keys(SCHEMA).forEach(function (name) {
     var sheet = getSheet_(name)
     var headers = SCHEMA[name]
@@ -62,6 +65,19 @@ function ensureSchema_() {
   formatearColumnaTexto_(SHEET_NAMES.USUARIOS, 'pin_hash')
   formatearColumnaTexto_(SHEET_NAMES.USUARIOS, 'pin_salt')
   formatearColumnaTexto_(SHEET_NAMES.SESIONES, 'token_hash')
+  formatearColumnaTexto_(SHEET_NAMES.COMPRA_MARCAS, 'semana')
+}
+
+// ensureSchemaForzado_ recorre 8 hojas leyendo cabeceras y fijando formatos
+// en cada petición autenticada; se cachea 1h para no pagar ese coste en
+// cada request. Las funciones admin (adminInicializarAuth, adminSetPin)
+// llaman a ensureSchemaForzado_ directamente para no depender de que la
+// caché haya caducado al dar de alta usuarios.
+function ensureSchema_() {
+  var cache = CacheService.getScriptCache()
+  if (cache.get('schema:ok')) return
+  ensureSchemaForzado_()
+  cache.put('schema:ok', '1', 3600)
 }
 
 function formatearColumnaTexto_(hoja, columna) {
@@ -135,23 +151,36 @@ function jsonOutput_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON)
 }
 
-function getToken_() {
-  return PropertiesService.getScriptProperties().getProperty('API_TOKEN')
+// HTTP siempre 200 (ContentService no permite otra cosa); `code` es lo que
+// deja al frontend distinguir "vuelve a entrar" de un error reintentable.
+function errorOutput_(code, mensaje) {
+  return jsonOutput_({ ok: false, code: code, error: mensaje })
 }
 
 // ---------- Lectura ----------
 
 function doGet(e) {
-  ensureSchema_()
-  var action = e && e.parameter ? e.parameter.action : null
+  var params = (e && e.parameter) || {}
+  var action = params.action || null
   try {
+    // Única acción pública del GET: alimenta el selector de la pantalla de login.
+    if (action === 'auth.usuarios') {
+      return jsonOutput_({ ok: true, usuarios: listaUsuariosPublica_() })
+    }
+    var sesion = autenticar_(params.token)
+    if (!sesion) return errorOutput_('UNAUTHENTICATED', 'sesión inválida o revocada')
+
+    ensureSchema_()
     if (action === 'bootstrap') return jsonOutput_(bootstrapResponse_())
     if (action === 'plan') {
-      return jsonOutput_({ ok: true, entries: getPlan_(e.parameter.desde, e.parameter.hasta) })
+      return jsonOutput_({ ok: true, entries: getPlan_(params.desde, params.hasta) })
     }
-    return jsonOutput_({ ok: false, error: 'acción GET desconocida: ' + action })
+    if (action === 'compra') {
+      return jsonOutput_({ ok: true, marcas: getCompraMarcas_(params.semana) })
+    }
+    return errorOutput_('UNKNOWN_ACTION', 'acción GET desconocida: ' + action)
   } catch (err) {
-    return jsonOutput_({ ok: false, error: String(err) })
+    return errorOutput_('INTERNAL', String(err))
   }
 }
 
@@ -175,6 +204,11 @@ function getPlan_(desde, hasta) {
     .filter(function (entry) { return entry.fecha >= desde && entry.fecha <= hasta })
 }
 
+function getCompraMarcas_(semana) {
+  return sheetToObjects_(SHEET_NAMES.COMPRA_MARCAS)
+    .filter(function (m) { return normalizeFecha_(m.semana) === semana })
+}
+
 // ---------- Escritura ----------
 
 function doPost(e) {
@@ -182,25 +216,49 @@ function doPost(e) {
   try {
     body = JSON.parse(e.postData.contents)
   } catch (err) {
-    return jsonOutput_({ ok: false, error: 'body no es JSON válido' })
+    return errorOutput_('BAD_REQUEST', 'body no es JSON válido')
   }
-  if (body.token !== getToken_()) {
-    return jsonOutput_({ ok: false, error: 'token inválido' })
+
+  // auth.login se resuelve antes de exigir sesión (es como se consigue una)
+  // y bajo su propio lock corto: no debe competir con el lock de 10s del
+  // resto de acciones ni bloquearse por él.
+  if (body.action === 'auth.login') {
+    var lockLogin = LockService.getScriptLock()
+    try {
+      lockLogin.waitLock(5000)
+    } catch (err) {
+      return errorOutput_('BUSY', 'inténtalo de nuevo')
+    }
+    try {
+      // login_ ya construye su propio sobre { ok, code, ... }; no se
+      // re-envuelve en { ok: true, result: ... } como el resto de acciones.
+      return jsonOutput_(login_(body.payload || {}))
+    } catch (err) {
+      return errorOutput_('INTERNAL', String(err))
+    } finally {
+      lockLogin.releaseLock()
+    }
   }
+
+  var sesion = autenticar_(body.token)
+  if (!sesion) {
+    return errorOutput_('UNAUTHENTICATED', 'sesión inválida o revocada')
+  }
+
   ensureSchema_()
   var lock = LockService.getScriptLock()
   lock.waitLock(10000)
   try {
-    var result = routeAction_(body.action, body.payload || {})
+    var result = routeAction_(body.action, body.payload || {}, sesion)
     return jsonOutput_({ ok: true, result: result })
   } catch (err) {
-    return jsonOutput_({ ok: false, error: String(err) })
+    return errorOutput_('INTERNAL', String(err))
   } finally {
     lock.releaseLock()
   }
 }
 
-function routeAction_(action, payload) {
+function routeAction_(action, payload, sesion) {
   var handlers = {
     'plan.set': planSet_,
     'plan.delete': planDelete_,
@@ -212,11 +270,13 @@ function routeAction_(action, payload) {
     'platoIngredientes.replace': platoIngredientesReplace_,
     'regla.upsert': reglaUpsert_,
     'regla.delete': reglaDelete_,
-    'admin.migrate': adminMigrate_
+    'admin.migrate': adminMigrate_,
+    'auth.logout': authLogout_,
+    'compra.marcar': compraMarcar_
   }
   var handler = handlers[action]
   if (!handler) throw new Error('acción POST desconocida: ' + action)
-  return handler(payload)
+  return handler(payload, sesion)
 }
 
 function planSet_(payload) {
@@ -355,6 +415,25 @@ function reglaDelete_(payload) {
   return { deleted: !!existing }
 }
 
+// La presencia de la fila significa "comprado": marcar añade fila,
+// desmarcar la borra. Evita acumular filas FALSE y refleja el mismo par
+// plan.set/plan.delete. Idempotente en ambos sentidos.
+function compraMarcar_(payload) {
+  var existente = findRow_(SHEET_NAMES.COMPRA_MARCAS, function (m) {
+    return normalizeFecha_(m.semana) === payload.semana &&
+      String(m.id_ingrediente) === String(payload.id_ingrediente) &&
+      m.unidad === payload.unidad
+  })
+  if (payload.comprado) {
+    if (existente) return { comprado: true }
+    var id = nextId_(SHEET_NAMES.COMPRA_MARCAS, 'id')
+    appendRow_(SHEET_NAMES.COMPRA_MARCAS, [id, payload.semana, payload.id_ingrediente, payload.unidad])
+    return { comprado: true }
+  }
+  if (existente) deleteRow_(SHEET_NAMES.COMPRA_MARCAS, existente._row)
+  return { comprado: false }
+}
+
 // ---------- Migración de datos existentes (acción idempotente) ----------
 
 function adminMigrate_() {
@@ -438,10 +517,6 @@ function adminMigrate_() {
 }
 
 // ---------- Autenticación: configuración ----------
-//
-// NOTA: estas primitivas todavía no están conectadas a doGet/doPost/routeAction_
-// (eso es una tarea aparte). Por ahora solo existen para poder crear usuarios
-// y probar auth.login / auth.usuarios / auth.logout de forma aislada.
 
 var AUTH = {
   ITERACIONES_PIN: 1000,
@@ -718,7 +793,7 @@ function authLogout_(payload, sesion) {
 // ---------- Autenticación: administración (ejecutar a mano desde el editor) ----------
 
 function adminInicializarAuth() {
-  ensureSchema_()
+  ensureSchemaForzado_()
   var props = PropertiesService.getScriptProperties()
   if (!props.getProperty('AUTH_PEPPER')) {
     props.setProperty('AUTH_PEPPER', Utilities.base64Encode(Utilities.computeDigest(
@@ -739,7 +814,7 @@ function adminSetPin() {
   try {
     if (!nombre) throw new Error('define ADMIN_NOMBRE en Propiedades del script')
     if (!/^[0-9]{6}$/.test(pin)) throw new Error('ADMIN_PIN debe tener 6 dígitos')
-    ensureSchema_()
+    ensureSchemaForzado_()
     var existente = findRow_(SHEET_NAMES.USUARIOS, function (u) {
       return String(u.nombre).trim().toLowerCase() === nombre.toLowerCase()
     })
