@@ -2,8 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../../test/mswServer'
+import { borrarSesion, guardarSesion } from '../../data/session'
 import { useWeekPlan } from './useWeekPlan'
 
 const API_URL = 'https://script.example.com/exec'
@@ -12,6 +13,14 @@ function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
+
+beforeEach(() => {
+  guardarSesion({ token: 'test-token', idUsuario: 1, nombre: 'Test' })
+})
+
+afterEach(() => {
+  borrarSesion()
+})
 
 function mockApi(entries: unknown[]) {
   server.use(

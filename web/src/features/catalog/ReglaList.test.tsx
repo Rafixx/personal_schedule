@@ -3,8 +3,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../test/mswServer'
+import { borrarSesion, guardarSesion } from '../../data/session'
 import type { Regla } from '../../domain/types'
 import { ReglaList } from './ReglaList'
 
@@ -20,8 +21,13 @@ const reglas: Regla[] = [
   { id: 2, etiqueta: 'pescado', tipo: 'MIN_SEMANA', valor: 2, activa: false }
 ]
 
+beforeEach(() => {
+  guardarSesion({ token: 'test-token', idUsuario: 1, nombre: 'Test' })
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
+  borrarSesion()
 })
 
 describe('ReglaList', () => {

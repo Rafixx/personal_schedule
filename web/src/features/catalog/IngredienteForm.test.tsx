@@ -3,8 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../test/mswServer'
+import { borrarSesion, guardarSesion } from '../../data/session'
 import { IngredienteForm } from './IngredienteForm'
 
 const API_URL = 'https://script.example.com/exec'
@@ -13,6 +14,14 @@ function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
+
+beforeEach(() => {
+  guardarSesion({ token: 'test-token', idUsuario: 1, nombre: 'Test' })
+})
+
+afterEach(() => {
+  borrarSesion()
+})
 
 describe('IngredienteForm', () => {
   it('crea un ingrediente nuevo con la temporada TODAS marcada por defecto', async () => {

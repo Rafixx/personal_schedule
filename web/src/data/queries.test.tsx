@@ -2,8 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/mswServer'
+import { borrarSesion, guardarSesion } from './session'
 import {
   useCatalogo,
   useIngredienteDelete,
@@ -18,6 +19,19 @@ import {
 } from './queries'
 
 const API_URL = 'https://script.example.com/exec'
+
+// El cliente ya no lleva un token fijo de build: lo toma de la sesión en
+// localStorage. La sembramos aquí para que las mutaciones de abajo, que
+// pasan por el singleton `sheetsClient` (vía `queries.ts`), sigan mandando
+// un token en el body — y las aserciones existentes sobre él sigan siendo
+// significativas.
+beforeEach(() => {
+  guardarSesion({ token: 'test-token', idUsuario: 1, nombre: 'Test' })
+})
+
+afterEach(() => {
+  borrarSesion()
+})
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })

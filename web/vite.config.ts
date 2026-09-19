@@ -11,8 +11,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     env: {
-      VITE_API_URL: 'https://script.example.com/exec',
-      VITE_API_TOKEN: 'test-token'
+      VITE_API_URL: 'https://script.example.com/exec'
     }
   }
 })

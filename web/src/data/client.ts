@@ -1,10 +1,13 @@
 import { createSheetsClient } from './sheetsClient'
+import { leerSesion } from './session'
 
 const baseUrl = import.meta.env.VITE_API_URL
-const token = import.meta.env.VITE_API_TOKEN
 
-if (!baseUrl || !token) {
-  throw new Error('Faltan VITE_API_URL o VITE_API_TOKEN — revisa el fichero .env.local (ver .env.example).')
+if (!baseUrl) {
+  throw new Error('Falta VITE_API_URL — revisa el fichero .env.local (ver .env.example).')
 }
 
-export const sheetsClient = createSheetsClient({ baseUrl, token })
+export const sheetsClient = createSheetsClient({
+  baseUrl,
+  getToken: () => leerSesion()?.token ?? null
+})

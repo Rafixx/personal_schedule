@@ -3,8 +3,9 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../test/mswServer'
+import { borrarSesion, guardarSesion } from '../../data/session'
 import type { Ingrediente } from '../../domain/types'
 import { IngredienteList } from './IngredienteList'
 
@@ -19,8 +20,13 @@ const ingredientes: Ingrediente[] = [
   { id: 1, nombre: 'Tomate', proveedor: 'Frutería', unidadBase: 'g', temporadas: ['VERANO'] }
 ]
 
+beforeEach(() => {
+  guardarSesion({ token: 'test-token', idUsuario: 1, nombre: 'Test' })
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
+  borrarSesion()
 })
 
 describe('IngredienteList', () => {

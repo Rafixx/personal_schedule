@@ -1,17 +1,19 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { server } from '../test/mswServer'
-import { ApiError, createSheetsClient } from './sheetsClient'
+import { ApiError, SesionInvalidaError, createSheetsClient } from './sheetsClient'
 
-const client = createSheetsClient({ baseUrl: 'https://script.example.com/exec', token: 't0k3n' })
+const BASE_URL = 'https://script.example.com/exec'
 
 describe('apiGet', () => {
-  it('añade action y params como query string y devuelve el JSON', async () => {
+  it('añade action, params y token como query string cuando hay sesión', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => 't0k3n' })
     server.use(
-      http.get('https://script.example.com/exec', ({ request }) => {
+      http.get(BASE_URL, ({ request }) => {
         const url = new URL(request.url)
         expect(url.searchParams.get('action')).toBe('plan')
         expect(url.searchParams.get('desde')).toBe('2026-09-07')
+        expect(url.searchParams.get('token')).toBe('t0k3n')
         return HttpResponse.json({ ok: true, entries: [] })
       })
     )
@@ -19,20 +21,43 @@ describe('apiGet', () => {
     expect(resultado).toEqual({ ok: true, entries: [] })
   })
 
-  it('lanza ApiError si la API responde ok:false', async () => {
+  it('omite el token de la query string cuando no hay sesión', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => null })
     server.use(
-      http.get('https://script.example.com/exec', () => HttpResponse.json({ ok: false, error: 'boom' }))
+      http.get(BASE_URL, ({ request }) => {
+        const url = new URL(request.url)
+        expect(url.searchParams.has('token')).toBe(false)
+        return HttpResponse.json({ ok: true })
+      })
     )
-    await expect(client.apiGet('bootstrap')).rejects.toThrow(ApiError)
+    await client.apiGet('auth.usuarios')
+  })
+
+  it('lanza ApiError con el code si la API responde ok:false', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => 't0k3n' })
+    server.use(http.get(BASE_URL, () => HttpResponse.json({ ok: false, code: 'INTERNAL', error: 'boom' })))
+    const promesa = client.apiGet('bootstrap')
+    await expect(promesa).rejects.toBeInstanceOf(ApiError)
+    await expect(promesa).rejects.not.toBeInstanceOf(SesionInvalidaError)
+    await expect(promesa).rejects.toMatchObject({ code: 'INTERNAL', message: 'boom' })
+  })
+
+  it('lanza SesionInvalidaError (no ApiError genérico) cuando code es UNAUTHENTICATED', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => 'expirado' })
+    server.use(
+      http.get(BASE_URL, () => HttpResponse.json({ ok: false, code: 'UNAUTHENTICATED', error: 'sesión inválida' }))
+    )
+    await expect(client.apiGet('plan')).rejects.toBeInstanceOf(SesionInvalidaError)
   })
 })
 
 describe('apiPost', () => {
   it('envía Content-Type text/plain con action, token y payload, y devuelve result', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => 't0k3n' })
     server.use(
-      http.post('https://script.example.com/exec', async ({ request }) => {
+      http.post(BASE_URL, async ({ request }) => {
         expect(request.headers.get('content-type')).toContain('text/plain')
-        const body = (await request.json()) as { action: string; token: string; payload: unknown }
+        const body = (await request.json()) as { action: string; token: string | null; payload: unknown }
         expect(body).toEqual({ action: 'plan.set', token: 't0k3n', payload: { fecha: '2026-09-07' } })
         return HttpResponse.json({ ok: true, result: { id: 1 } })
       })
@@ -41,12 +66,32 @@ describe('apiPost', () => {
     expect(resultado).toEqual({ id: 1 })
   })
 
-  it('lanza ApiError si la API responde ok:false', async () => {
+  it('incluye token: null en el body cuando no hay sesión', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => null })
     server.use(
-      http.post('https://script.example.com/exec', () =>
-        HttpResponse.json({ ok: false, error: 'token inválido' })
-      )
+      http.post(BASE_URL, async ({ request }) => {
+        const body = (await request.json()) as { token: string | null }
+        expect(body.token).toBeNull()
+        return HttpResponse.json({ ok: true, result: {} })
+      })
     )
-    await expect(client.apiPost('plan.set', {})).rejects.toThrow('token inválido')
+    await client.apiPost('auth.login', { id_usuario: 1, pin: '123456' })
+  })
+
+  it('lanza ApiError con el code si la API responde ok:false', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => 't0k3n' })
+    server.use(http.post(BASE_URL, () => HttpResponse.json({ ok: false, code: 'LOCKED_OUT', error: 'bloqueado' })))
+    const promesa = client.apiPost('plan.set', {})
+    await expect(promesa).rejects.toBeInstanceOf(ApiError)
+    await expect(promesa).rejects.not.toBeInstanceOf(SesionInvalidaError)
+    await expect(promesa).rejects.toMatchObject({ code: 'LOCKED_OUT', message: 'bloqueado' })
+  })
+
+  it('lanza SesionInvalidaError cuando code es UNAUTHENTICATED', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => 'expirado' })
+    server.use(
+      http.post(BASE_URL, () => HttpResponse.json({ ok: false, code: 'UNAUTHENTICATED', error: 'sesión inválida' }))
+    )
+    await expect(client.apiPost('plan.set', {})).rejects.toBeInstanceOf(SesionInvalidaError)
   })
 })
