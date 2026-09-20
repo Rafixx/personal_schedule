@@ -225,6 +225,92 @@ describe('useMarcarCompra', () => {
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 8000 })
     expect(queryClient.getQueryData(['compra', '2026-09-07'])).toEqual([marcaExistente])
   }, 10000)
+
+  it('no borra una marca ya persistida de otro dispositivo si se marca un ítem distinto antes de que resuelva el GET inicial', async () => {
+    // Reproduce el escenario: "leche" ya está marcada en el servidor (otro
+    // dispositivo la marcó). Esta pestaña abre la lista y su GET inicial de
+    // ['compra', semana] todavía está en curso (useShoppingList.cargando no
+    // depende de esta query) cuando el usuario marca "azúcar", un ítem
+    // distinto. onMutate no debe sintetizar [{azúcar}] a partir de undefined
+    // — eso ocultaría "leche" hasta que onSettled corrigiera la caché.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    function wrapperConCliente({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    }
+
+    let llamadasGet = 0
+    let resolverPrimerGet: (() => void) | undefined
+    let resolverPost: (() => void) | undefined
+    server.use(
+      http.get(API_URL, async () => {
+        llamadasGet++
+        if (llamadasGet === 1) {
+          // El GET inicial se mantiene en curso hasta que el test lo libere
+          // explícitamente, para poder marcar "azúcar" mientras aún no ha
+          // resuelto ni una sola vez.
+          await new Promise<void>((resolve) => {
+            resolverPrimerGet = resolve
+          })
+        }
+        return HttpResponse.json({
+          ok: true,
+          // El backend ya tenía "leche" marcada desde antes; "azúcar" solo
+          // aparece a partir de la segunda llamada (la que dispara onSettled
+          // tras el POST), como haría el backend real tras persistirla.
+          marcas: [
+            { id: 1, semana: '2026-09-07', id_ingrediente: 1, unidad: 'l' },
+            ...(llamadasGet >= 2 ? [{ id: 2, semana: '2026-09-07', id_ingrediente: 2, unidad: 'kg' }] : [])
+          ]
+        })
+      }),
+      http.post(API_URL, async () => {
+        await new Promise<void>((resolve) => {
+          resolverPost = resolve
+        })
+        return HttpResponse.json({ ok: true, result: { comprado: true } })
+      })
+    )
+
+    function useAmbos() {
+      return { marcas: useMarcasCompra('2026-09-07'), marcar: useMarcarCompra() }
+    }
+    const { result } = renderHook(() => useAmbos(), { wrapper: wrapperConCliente })
+
+    await waitFor(() => expect(resolverPrimerGet).toBeDefined())
+    expect(queryClient.getQueryData(['compra', '2026-09-07'])).toBeUndefined()
+
+    // Se marca "azúcar" (id 2) mientras el GET inicial (que ya trae "leche")
+    // sigue sin resolver ni una vez. El POST también se mantiene en curso
+    // para tener una ventana estable en la que comprobar el estado de la
+    // caché tras onMutate, antes de que nada más la toque.
+    result.current.marcar.mutate({ semana: '2026-09-07', idIngrediente: 2, unidad: 'kg', comprado: true })
+
+    await waitFor(() => expect(resolverPost).toBeDefined())
+
+    // Esta es la comprobación central de la regresión: al no haber datos
+    // previos en caché, onMutate NO debe escribir una lista parcial — la
+    // caché debe seguir "sin cargar" (undefined) en vez de pasar a
+    // [{azúcar}], que habría dejado a "leche" fuera de la vista en cuanto
+    // algo la pintase (antes de la corrección, esta aserción fallaba: la
+    // caché ya contenía [{azúcar}] en este punto).
+    expect(queryClient.getQueryData(['compra', '2026-09-07'])).toBeUndefined()
+
+    // El GET inicial queda cancelado por onMutate (cancelQueries) y su
+    // resultado se descarta al resolver — se libera solo para no dejar una
+    // promesa colgada en el test.
+    resolverPrimerGet?.()
+
+    // El POST de "azúcar" resuelve; onSettled invalida y dispara un GET
+    // nuevo (no cancelado) que trae ambas marcas, como las tendría el
+    // backend real: "leche" nunca se perdió de verdad.
+    resolverPost?.()
+    await waitFor(() =>
+      expect(result.current.marcas.data).toEqual([
+        { id: 1, semana: '2026-09-07', idIngrediente: 1, unidad: 'l' },
+        { id: 2, semana: '2026-09-07', idIngrediente: 2, unidad: 'kg' }
+      ])
+    )
+  })
 })
 
 describe('usePlatoUpsert', () => {

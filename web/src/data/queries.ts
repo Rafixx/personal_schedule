@@ -249,13 +249,17 @@ export function useMarcarCompra() {
       await queryClient.cancelQueries({ queryKey })
       const previas = queryClient.getQueryData<MarcaCompra[]>(queryKey)
       queryClient.setQueryData<MarcaCompra[]>(queryKey, (anteriores) => {
-        // A diferencia de instantaneaPlan (que aplica a varias queries ['plan',...]
-        // y puede no haber ninguna montada), aquí sabemos que hay exactamente una
-        // página mirando esta clave — si aún no ha cargado, partimos de [] en vez
-        // de omitir la actualización, para que el checkbox responda al instante
-        // incluso si se pulsa antes de que resuelva el GET inicial.
-        const base = anteriores ?? []
-        const sinEsaMarca = base.filter((m) => !(m.idIngrediente === args.idIngrediente && m.unidad === args.unidad))
+        // Igual que useSetPlanEntry/useDeletePlanEntry: si todavía no hay datos
+        // (el GET inicial ni siquiera ha resuelto — cancelQueries lo acaba de
+        // descartar), NO sintetizamos una lista a partir de [], porque eso
+        // borraría de la vista marcas reales ya persistidas (p.ej. "leche"
+        // marcada desde otro dispositivo) que aún no habían llegado a esta
+        // caché. Se omite la actualización optimista en ese caso concreto; el
+        // POST sigue adelante igualmente y onSettled corrige el estado real.
+        if (!anteriores) return anteriores
+        const sinEsaMarca = anteriores.filter(
+          (m) => !(m.idIngrediente === args.idIngrediente && m.unidad === args.unidad)
+        )
         if (!args.comprado) return sinEsaMarca
         return [
           ...sinEsaMarca,
