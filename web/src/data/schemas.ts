@@ -58,6 +58,13 @@ export const planEntryRowSchema = z.object({
   notas: textoFlexible
 })
 
+export const marcaCompraRowSchema = z.object({
+  id: z.coerce.number().int(),
+  semana: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  id_ingrediente: z.coerce.number().int(),
+  unidad: textoFlexible.pipe(z.string().min(1))
+})
+
 export const reglaRowSchema = z.object({
   id: z.coerce.number().int(),
   etiqueta: textoFlexible.pipe(z.string().min(1)),
@@ -83,6 +90,11 @@ export const bootstrapEnvelopeSchema = z.object({
 export const planEnvelopeSchema = z.object({
   ok: z.literal(true),
   entries: z.array(z.unknown())
+})
+
+export const compraEnvelopeSchema = z.object({
+  ok: z.literal(true),
+  marcas: z.array(z.unknown())
 })
 
 export interface FilaInvalida {

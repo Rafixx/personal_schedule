@@ -12,6 +12,8 @@ import {
   useIngredienteUpsert,
   useLogin,
   useLogout,
+  useMarcarCompra,
+  useMarcasCompra,
   useMovePlanEntry,
   usePlatoDelete,
   usePlatoIngredientesReplace,
@@ -138,6 +140,91 @@ describe('useMovePlanEntry', () => {
       }
     })
   })
+})
+
+describe('useMarcasCompra', () => {
+  it('pide la semana correcta y mapea las marcas a MarcaCompra', async () => {
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        const url = new URL(request.url)
+        expect(url.searchParams.get('action')).toBe('compra')
+        expect(url.searchParams.get('semana')).toBe('2026-09-07')
+        return HttpResponse.json({
+          ok: true,
+          marcas: [{ id: 1, semana: '2026-09-07', id_ingrediente: 3, unidad: 'g' }]
+        })
+      })
+    )
+    const { result } = renderHook(() => useMarcasCompra('2026-09-07'), { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual([{ id: 1, semana: '2026-09-07', idIngrediente: 3, unidad: 'g' }])
+  })
+})
+
+describe('useMarcarCompra', () => {
+  it('llama a compra.marcar con semana, id_ingrediente, unidad y comprado', async () => {
+    let payloadRecibido: unknown = null
+    server.use(
+      http.post(API_URL, async ({ request }) => {
+        payloadRecibido = await request.json()
+        return HttpResponse.json({ ok: true, result: { comprado: true } })
+      })
+    )
+    const { result } = renderHook(() => useMarcarCompra(), { wrapper })
+    result.current.mutate({ semana: '2026-09-07', idIngrediente: 3, unidad: 'g', comprado: true })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(payloadRecibido).toEqual({
+      action: 'compra.marcar',
+      token: 'test-token',
+      payload: { semana: '2026-09-07', id_ingrediente: 3, unidad: 'g', comprado: true }
+    })
+  })
+
+  it('actualiza la caché de ["compra", semana] al instante, antes de que resuelva el POST', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClient.setQueryData(['compra', '2026-09-07'], [])
+    function wrapperConCliente({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    }
+    let resolverPost: (() => void) | undefined
+    server.use(
+      http.post(API_URL, async () => {
+        await new Promise<void>((resolve) => {
+          resolverPost = resolve
+        })
+        return HttpResponse.json({ ok: true, result: { comprado: true } })
+      })
+    )
+    const { result } = renderHook(() => useMarcarCompra(), { wrapper: wrapperConCliente })
+
+    result.current.mutate({ semana: '2026-09-07', idIngrediente: 3, unidad: 'g', comprado: true })
+
+    await waitFor(() =>
+      expect(queryClient.getQueryData(['compra', '2026-09-07'])).toEqual([
+        { id: expect.any(Number), semana: '2026-09-07', idIngrediente: 3, unidad: 'g' }
+      ])
+    )
+    expect(resolverPost).toBeDefined()
+    resolverPost?.()
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+  })
+
+  it('revierte la caché si el POST falla', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const marcaExistente = { id: 1, semana: '2026-09-07', idIngrediente: 3, unidad: 'g' }
+    queryClient.setQueryData(['compra', '2026-09-07'], [marcaExistente])
+    function wrapperConCliente({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    }
+    server.use(http.post(API_URL, () => HttpResponse.json({ ok: false, error: 'fallo' }, { status: 500 })))
+    const { result } = renderHook(() => useMarcarCompra(), { wrapper: wrapperConCliente })
+
+    result.current.mutate({ semana: '2026-09-07', idIngrediente: 3, unidad: 'g', comprado: false })
+
+    await waitFor(() => expect(queryClient.getQueryData(['compra', '2026-09-07'])).toEqual([]))
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 8000 })
+    expect(queryClient.getQueryData(['compra', '2026-09-07'])).toEqual([marcaExistente])
+  }, 10000)
 })
 
 describe('usePlatoUpsert', () => {

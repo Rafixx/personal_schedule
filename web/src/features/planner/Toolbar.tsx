@@ -1,3 +1,5 @@
+import { SyncPill } from '../../shared/SyncPill'
+
 export type VistaPlanner = 'semana' | 'mes'
 
 export interface ToolbarProps {
@@ -21,9 +23,6 @@ export function Toolbar({
   onCambiarVista,
   onRefrescar
 }: ToolbarProps) {
-  const textoSync = error ? 'Sin conexión' : guardando ? 'Guardando…' : 'Guardado'
-  const colorDot = error ? 'bg-amber-600' : guardando ? 'bg-amber-500 animate-pulse' : 'bg-green-600'
-
   return (
     <div className="flex flex-1 flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-2.5">
@@ -68,18 +67,7 @@ export function Toolbar({
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={onRefrescar}
-        aria-label="Actualizar datos de la hoja"
-        className="inline-flex min-w-[128px] items-center gap-2 rounded-full bg-white/10 py-2 pl-2.5 pr-3.5 text-sm font-semibold text-white/85 hover:bg-white/20"
-      >
-        <span className={`h-2.5 w-2.5 rounded-full ${colorDot}`} />
-        {textoSync}
-        <span aria-hidden="true" className="ml-auto text-white/60">
-          ↻
-        </span>
-      </button>
+      <SyncPill guardando={guardando} error={error} onRefrescar={onRefrescar} />
     </div>
   )
 }

@@ -1,16 +1,35 @@
 import { useState } from 'react'
+import { useIsMutating, useQueryClient } from '@tanstack/react-query'
 import type { RangoCompra } from './useShoppingList'
-import { useShoppingList } from './useShoppingList'
+import { semanaDeRango, useShoppingList } from './useShoppingList'
+import { useMarcasCompra } from '../../data/queries'
 import { ProviderGroup } from './ProviderGroup'
 import { formatoTextoCompra } from '../../domain/compra'
 import { lunesDe } from '../../shared/semanaDates'
 import { AppBar } from '../../shared/AppBar'
+import { SyncPill } from '../../shared/SyncPill'
 
 export function ShoppingListPage() {
   const [lunesActual] = useState(() => lunesDe(new Date()))
   const [rango, setRango] = useState<RangoCompra>('actual')
   const [copiado, setCopiado] = useState(false)
   const { listas, cargando, error, comprado, marcarComprado } = useShoppingList(lunesActual, rango)
+
+  const queryClient = useQueryClient()
+  const semana = semanaDeRango(lunesActual, rango)
+  // Comparte caché con la query de dentro de useShoppingList (misma clave
+  // ['compra', semana]): esta segunda suscripción solo sirve para leer su
+  // isFetching/isError, ya que el hook no expone esos estados para no tocar
+  // su forma pública. useIsMutating (por mutationKey) detecta el envío en
+  // curso de marcarComprado sin necesidad de compartir esa instancia.
+  const marcasCompra = useMarcasCompra(semana)
+  const marcandoCompra = useIsMutating({ mutationKey: ['compra.marcar'] }) > 0
+
+  function refrescar() {
+    queryClient.invalidateQueries({ queryKey: ['compra', semana] })
+    queryClient.invalidateQueries({ queryKey: ['plan'] })
+    queryClient.invalidateQueries({ queryKey: ['catalogo'] })
+  }
 
   async function copiar() {
     await navigator.clipboard.writeText(formatoTextoCompra(listas))
@@ -48,14 +67,21 @@ export function ShoppingListPage() {
               La semana que viene
             </button>
           </div>
-          <button
-            type="button"
-            onClick={copiar}
-            disabled={listas.length === 0}
-            className="rounded-full bg-white/10 px-4.5 py-2 text-sm font-semibold text-white/85 hover:bg-white/20 disabled:opacity-40"
-          >
-            {copiado ? 'Copiado' : 'Copiar'}
-          </button>
+          <div className="flex items-center gap-2.5">
+            <SyncPill
+              guardando={marcasCompra.isFetching || marcandoCompra}
+              error={marcasCompra.isError}
+              onRefrescar={refrescar}
+            />
+            <button
+              type="button"
+              onClick={copiar}
+              disabled={listas.length === 0}
+              className="rounded-full bg-white/10 px-4.5 py-2 text-sm font-semibold text-white/85 hover:bg-white/20 disabled:opacity-40"
+            >
+              {copiado ? 'Copiado' : 'Copiar'}
+            </button>
+          </div>
         </div>
       </AppBar>
 

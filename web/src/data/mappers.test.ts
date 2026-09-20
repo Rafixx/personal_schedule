@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapIngrediente, mapPlanEntry, mapPlato } from './mappers'
+import { mapIngrediente, mapMarcaCompra, mapPlanEntry, mapPlato } from './mappers'
 
 describe('mapPlato', () => {
   it('convierte temporada y etiquetas en listas, e ignora _row', () => {
@@ -80,6 +80,23 @@ describe('mapPlanEntry', () => {
       orden: 2,
       idPlato: 3,
       notas: ''
+    })
+  })
+})
+
+describe('mapMarcaCompra', () => {
+  it('mapea id_ingrediente a idIngrediente', () => {
+    const resultado = mapMarcaCompra({
+      id: 9,
+      semana: '2026-09-07',
+      id_ingrediente: 3,
+      unidad: 'g'
+    })
+    expect(resultado).toEqual({
+      id: 9,
+      semana: '2026-09-07',
+      idIngrediente: 3,
+      unidad: 'g'
     })
   })
 })

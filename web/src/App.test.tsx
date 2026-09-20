@@ -38,7 +38,8 @@ function mockBootstrapYPlan() {
   server.use(
     http.get(API_URL, ({ request }) => {
       const url = new URL(request.url)
-      if (url.searchParams.get('action') === 'bootstrap') {
+      const action = url.searchParams.get('action')
+      if (action === 'bootstrap') {
         return HttpResponse.json({
           ok: true,
           platos: [{ id_plato: 1, nombre: 'Gazpacho', temporada: 'TODAS', etiquetas: 'verdura', notas: '', activo: true }],
@@ -47,6 +48,12 @@ function mockBootstrapYPlan() {
           reglas: [],
           proveedores: []
         })
+      }
+      // La navegación a /compra (ver tests más abajo) monta ShoppingListPage,
+      // que además de 'plan' pide 'compra' — sin esto, compraEnvelopeSchema
+      // fallaría al parsear {entries:[]} por no traer `marcas`.
+      if (action === 'compra') {
+        return HttpResponse.json({ ok: true, marcas: [] })
       }
       return HttpResponse.json({ ok: true, entries: [] })
     })

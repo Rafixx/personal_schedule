@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
-import type { Catalogo, Orden, PlanEntry, Temporada, TipoRegla, Turno } from '../domain/types'
+import type { Catalogo, MarcaCompra, Orden, PlanEntry, Temporada, TipoRegla, Turno } from '../domain/types'
 import { sheetsClient } from './client'
 import { borrarSesion, guardarSesion } from './session'
 import type { FilaInvalida } from './schemas'
 import {
   bootstrapEnvelopeSchema,
+  compraEnvelopeSchema,
   ingredientePlatoRowSchema,
   ingredienteRowSchema,
+  marcaCompraRowSchema,
   parseRows,
   planEnvelopeSchema,
   planEntryRowSchema,
@@ -17,6 +19,7 @@ import {
 import {
   mapIngrediente,
   mapIngredientePlato,
+  mapMarcaCompra,
   mapPlanEntry,
   mapPlato,
   mapProveedor,
@@ -200,6 +203,71 @@ export function useDeletePlanEntry() {
       if (context) revertirPlan(queryClient, context.previas)
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['plan'] })
+  })
+}
+
+// ---------- Lista de la compra ----------
+
+async function fetchMarcasCompra(semana: string): Promise<MarcaCompra[]> {
+  const raw = await sheetsClient.apiGet('compra', { semana })
+  const envelope = compraEnvelopeSchema.parse(raw)
+  const { valid } = parseRows(marcaCompraRowSchema, envelope.marcas)
+  return valid.map(mapMarcaCompra)
+}
+
+export function useMarcasCompra(semana: string) {
+  return useQuery({ queryKey: ['compra', semana], queryFn: () => fetchMarcasCompra(semana) })
+}
+
+interface MarcarCompraInput {
+  semana: string
+  idIngrediente: number
+  unidad: string
+  comprado: boolean
+}
+
+// mutationKey (además de la mutationFn) para que quien no dispara la mutación
+// directamente —como el indicador de sincronización de ShoppingListPage—
+// pueda saber si hay una marca en curso vía useIsMutating.
+export function useMarcarCompra() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationKey: ['compra.marcar'],
+    mutationFn: (args: MarcarCompraInput) =>
+      sheetsClient.apiPost('compra.marcar', {
+        semana: args.semana,
+        id_ingrediente: args.idIngrediente,
+        unidad: args.unidad,
+        comprado: args.comprado
+      }),
+    // compra.marcar es idempotente por diseño (marcar dos veces o desmarcar
+    // dos veces no hace nada la segunda vez), así que reintentar tras un
+    // fallo de red es seguro.
+    retry: 2,
+    onMutate: async (args) => {
+      const queryKey = ['compra', args.semana]
+      await queryClient.cancelQueries({ queryKey })
+      const previas = queryClient.getQueryData<MarcaCompra[]>(queryKey)
+      queryClient.setQueryData<MarcaCompra[]>(queryKey, (anteriores) => {
+        // A diferencia de instantaneaPlan (que aplica a varias queries ['plan',...]
+        // y puede no haber ninguna montada), aquí sabemos que hay exactamente una
+        // página mirando esta clave — si aún no ha cargado, partimos de [] en vez
+        // de omitir la actualización, para que el checkbox responda al instante
+        // incluso si se pulsa antes de que resuelva el GET inicial.
+        const base = anteriores ?? []
+        const sinEsaMarca = base.filter((m) => !(m.idIngrediente === args.idIngrediente && m.unidad === args.unidad))
+        if (!args.comprado) return sinEsaMarca
+        return [
+          ...sinEsaMarca,
+          { id: -Date.now(), semana: args.semana, idIngrediente: args.idIngrediente, unidad: args.unidad }
+        ]
+      })
+      return { previas, queryKey }
+    },
+    onError: (_err, _args, context) => {
+      if (context) queryClient.setQueryData(context.queryKey, context.previas)
+    },
+    onSettled: (_data, _err, args) => queryClient.invalidateQueries({ queryKey: ['compra', args.semana] })
   })
 }
 

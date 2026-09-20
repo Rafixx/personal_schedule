@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   bootstrapEnvelopeSchema,
+  compraEnvelopeSchema,
   ingredienteRowSchema,
+  marcaCompraRowSchema,
   parseRows,
   planEntryRowSchema,
   platoRowSchema
@@ -128,6 +130,59 @@ describe('planEntryRowSchema', () => {
       notas: ''
     })
     expect(resultado.success).toBe(false)
+  })
+})
+
+describe('marcaCompraRowSchema', () => {
+  it('acepta una fila real de la hoja compra_marcas', () => {
+    const resultado = marcaCompraRowSchema.safeParse({
+      id: 1,
+      semana: '2026-09-07',
+      id_ingrediente: 3,
+      unidad: 'g'
+    })
+    expect(resultado.success).toBe(true)
+  })
+
+  it('coacciona id_ingrediente a número', () => {
+    const resultado = marcaCompraRowSchema.safeParse({
+      id: 1,
+      semana: '2026-09-07',
+      id_ingrediente: '3',
+      unidad: 'g'
+    })
+    expect(resultado.success).toBe(true)
+    expect(resultado.success && resultado.data.id_ingrediente).toBe(3)
+  })
+
+  it('rechaza semana con formato de fecha inválido', () => {
+    const resultado = marcaCompraRowSchema.safeParse({
+      id: 1,
+      semana: '07/09/2026',
+      id_ingrediente: 3,
+      unidad: 'g'
+    })
+    expect(resultado.success).toBe(false)
+  })
+
+  it('rechaza unidad vacía', () => {
+    const resultado = marcaCompraRowSchema.safeParse({
+      id: 1,
+      semana: '2026-09-07',
+      id_ingrediente: 3,
+      unidad: ''
+    })
+    expect(resultado.success).toBe(false)
+  })
+})
+
+describe('compraEnvelopeSchema', () => {
+  it('valida la forma general de la respuesta sin validar cada fila todavía', () => {
+    const resultado = compraEnvelopeSchema.safeParse({
+      ok: true,
+      marcas: [{ cualquierCosa: true }]
+    })
+    expect(resultado.success).toBe(true)
   })
 })
 

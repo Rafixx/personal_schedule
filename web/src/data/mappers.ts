@@ -2,6 +2,7 @@ import type { z } from 'zod'
 import type {
   Ingrediente,
   IngredientePlato,
+  MarcaCompra,
   PlanEntry,
   Plato,
   Proveedor,
@@ -11,6 +12,7 @@ import type {
 import type {
   ingredientePlatoRowSchema,
   ingredienteRowSchema,
+  marcaCompraRowSchema,
   planEntryRowSchema,
   platoRowSchema,
   proveedorRowSchema,
@@ -75,6 +77,15 @@ export function mapPlanEntry(row: z.infer<typeof planEntryRowSchema>): PlanEntry
     orden: row.orden as PlanEntry['orden'],
     idPlato: row.id_plato,
     notas: row.notas
+  }
+}
+
+export function mapMarcaCompra(row: z.infer<typeof marcaCompraRowSchema>): MarcaCompra {
+  return {
+    id: row.id,
+    semana: row.semana,
+    idIngrediente: row.id_ingrediente,
+    unidad: row.unidad
   }
 }
 

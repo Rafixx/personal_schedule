@@ -43,6 +43,15 @@ export interface PlanEntry {
   notas: string
 }
 
+// La presencia de una fila ES el estado "comprado": no hay columna booleana
+// (ver Codigo.gs, hoja compra_marcas).
+export interface MarcaCompra {
+  id: number
+  semana: string
+  idIngrediente: number
+  unidad: string
+}
+
 export type TipoRegla = 'MAX_SEMANA' | 'MIN_SEMANA' | 'NO_CONSECUTIVO'
 
 export interface Regla {
