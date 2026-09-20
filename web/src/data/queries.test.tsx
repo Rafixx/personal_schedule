@@ -4,18 +4,22 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/mswServer'
-import { borrarSesion, guardarSesion } from './session'
+import { borrarSesion, guardarSesion, leerSesion } from './session'
+import { ApiError } from './sheetsClient'
 import {
   useCatalogo,
   useIngredienteDelete,
   useIngredienteUpsert,
+  useLogin,
+  useLogout,
   useMovePlanEntry,
   usePlatoDelete,
   usePlatoIngredientesReplace,
   usePlatoUpsert,
   useReglaDelete,
   useReglaUpsert,
-  useSetPlanEntry
+  useSetPlanEntry,
+  useUsuarios
 } from './queries'
 
 const API_URL = 'https://script.example.com/exec'
@@ -321,5 +325,107 @@ describe('useReglaDelete', () => {
     result.current.mutate({ id: 4 })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(payloadRecibido).toEqual({ action: 'regla.delete', token: 'test-token', payload: { id: 4 } })
+  })
+})
+
+describe('useUsuarios', () => {
+  it('mapea auth.usuarios a {id, nombre}, sin nombres hardcodeados', async () => {
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        const url = new URL(request.url)
+        expect(url.searchParams.get('action')).toBe('auth.usuarios')
+        return HttpResponse.json({
+          ok: true,
+          usuarios: [
+            { id_usuario: 1, nombre: 'Rafa' },
+            { id_usuario: 2, nombre: 'Lourdes' }
+          ]
+        })
+      })
+    )
+    const { result } = renderHook(() => useUsuarios(), { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual([
+      { id: 1, nombre: 'Rafa' },
+      { id: 2, nombre: 'Lourdes' }
+    ])
+  })
+})
+
+describe('useLogin', () => {
+  it('manda { id_usuario, pin, dispositivo } y guarda la sesión al acertar', async () => {
+    let payloadRecibido: unknown = null
+    server.use(
+      http.post(API_URL, async ({ request }) => {
+        payloadRecibido = await request.json()
+        return HttpResponse.json({
+          ok: true,
+          token: 'nuevo-token',
+          usuario: { id_usuario: 3, nombre: 'Paula' },
+          id_sesion: 42
+        })
+      })
+    )
+    const { result } = renderHook(() => useLogin(), { wrapper })
+    result.current.mutate({ idUsuario: 3, pin: '123456', dispositivo: 'vitest' })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(payloadRecibido).toEqual({
+      action: 'auth.login',
+      token: 'test-token',
+      payload: { id_usuario: 3, pin: '123456', dispositivo: 'vitest' }
+    })
+    expect(leerSesion()).toEqual({ token: 'nuevo-token', idUsuario: 3, nombre: 'Paula' })
+  })
+
+  it('propaga el error con su code (LOCKED_OUT) para que la pantalla lo distinga', async () => {
+    server.use(
+      http.post(API_URL, () =>
+        HttpResponse.json({
+          ok: false,
+          code: 'LOCKED_OUT',
+          error: 'demasiados intentos fallidos',
+          reintentar_en_s: 90
+        })
+      )
+    )
+    const { result } = renderHook(() => useLogin(), { wrapper })
+    result.current.mutate({ idUsuario: 3, pin: '000000', dispositivo: 'vitest' })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error).toBeInstanceOf(ApiError)
+    expect(result.current.error).toMatchObject({ code: 'LOCKED_OUT', reintentarEnS: 90 })
+    // Un login fallido no debe tocar la sesión ya existente.
+    expect(leerSesion()).toEqual({ token: 'test-token', idUsuario: 1, nombre: 'Test' })
+  })
+})
+
+describe('useLogout', () => {
+  it('llama a auth.logout y luego borra la sesión y vacía la caché de queries', async () => {
+    let accionRecibida: string | null = null
+    server.use(
+      http.post(API_URL, async ({ request }) => {
+        const body = (await request.json()) as { action: string }
+        accionRecibida = body.action
+        return HttpResponse.json({ ok: true, result: { revocadas: 1 } })
+      })
+    )
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClient.setQueryData(['catalogo'], { algo: 'lo-que-sea' })
+    function wrapperConCliente({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    }
+    const { result } = renderHook(() => useLogout(), { wrapper: wrapperConCliente })
+    result.current.mutate()
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(accionRecibida).toBe('auth.logout')
+    expect(leerSesion()).toBeNull()
+    expect(queryClient.getQueryData(['catalogo'])).toBeUndefined()
+  })
+
+  it('borra la sesión igualmente aunque la llamada a auth.logout falle', async () => {
+    server.use(http.post(API_URL, () => HttpResponse.json({ ok: false, code: 'INTERNAL', error: 'boom' })))
+    const { result } = renderHook(() => useLogout(), { wrapper })
+    result.current.mutate()
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(leerSesion()).toBeNull()
   })
 })

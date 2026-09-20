@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthGate } from './features/auth/AuthGate'
 import { PlannerPage } from './features/planner/PlannerPage'
 import type { VistaPlanner } from './features/planner/Toolbar'
 import { ShoppingListPage } from './features/shopping/ShoppingListPage'
@@ -12,11 +13,13 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<PlannerPage lunes={lunes} setLunes={setLunes} vista={vista} setVista={setVista} />} />
-        <Route path="/compra" element={<ShoppingListPage />} />
-        <Route path="/catalogo" element={<CatalogPage />} />
-      </Routes>
+      <AuthGate>
+        <Routes>
+          <Route path="/" element={<PlannerPage lunes={lunes} setLunes={setLunes} vista={vista} setVista={setVista} />} />
+          <Route path="/compra" element={<ShoppingListPage />} />
+          <Route path="/catalogo" element={<CatalogPage />} />
+        </Routes>
+      </AuthGate>
     </BrowserRouter>
   )
 }

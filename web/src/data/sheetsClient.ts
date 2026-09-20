@@ -1,10 +1,14 @@
 export class ApiError extends Error {
   code?: string
+  // Solo lo manda la API en LOCKED_OUT (ver Codigo.gs respuestaBloqueado_):
+  // segundos que faltan para poder reintentar el login.
+  reintentarEnS?: number
 
-  constructor(message: string, code?: string) {
+  constructor(message: string, code?: string, reintentarEnS?: number) {
     super(message)
     this.name = 'ApiError'
     this.code = code
+    this.reintentarEnS = reintentarEnS
   }
 }
 
@@ -28,13 +32,14 @@ interface RespuestaApi {
   code?: string
   error?: string
   result?: unknown
+  reintentar_en_s?: number
 }
 
 function lanzarSiRespuestaError(json: RespuestaApi): void {
   if (json.ok === false) {
     const mensaje = json.error ?? 'error desconocido'
     if (json.code === 'UNAUTHENTICATED') throw new SesionInvalidaError(mensaje)
-    throw new ApiError(mensaje, json.code)
+    throw new ApiError(mensaje, json.code, json.reintentar_en_s)
   }
 }
 
@@ -61,6 +66,11 @@ export function createSheetsClient(config: { baseUrl: string; getToken: () => st
     if (!res.ok) throw new ApiError(`HTTP ${res.status}`)
     const json = (await res.json()) as RespuestaApi
     lanzarSiRespuestaError(json)
+    // auth.login es la única acción POST cuya respuesta no viene envuelta en
+    // { ok:true, result:... } (ver Codigo.gs, doPost): en éxito devuelve
+    // { ok:true, token, usuario, id_sesion } al mismo nivel que `ok`. Para
+    // el resto de acciones json.result sí es la forma correcta.
+    if (action === 'auth.login') return json
     return json.result
   }
 

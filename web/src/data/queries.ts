@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { Catalogo, Orden, PlanEntry, Temporada, TipoRegla, Turno } from '../domain/types'
 import { sheetsClient } from './client'
+import { borrarSesion, guardarSesion } from './session'
 import type { FilaInvalida } from './schemas'
 import {
   bootstrapEnvelopeSchema,
@@ -331,5 +332,74 @@ export function useReglaDelete() {
   return useMutation({
     mutationFn: (args: { id: number }) => sheetsClient.apiPost('regla.delete', { id: args.id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['catalogo'] })
+  })
+}
+
+// ---------- Autenticación ----------
+
+export interface Usuario {
+  id: number
+  nombre: string
+}
+
+interface UsuariosEnvelope {
+  usuarios: { id_usuario: number; nombre: string }[]
+}
+
+async function fetchUsuarios(): Promise<Usuario[]> {
+  const raw = (await sheetsClient.apiGet('auth.usuarios')) as UsuariosEnvelope
+  return raw.usuarios.map((u) => ({ id: u.id_usuario, nombre: u.nombre }))
+}
+
+// Público (no exige sesión): alimenta el selector de nombre de la pantalla
+// de login, por eso vive junto al resto de queries y no detrás de AuthGate.
+export function useUsuarios() {
+  return useQuery({ queryKey: ['usuarios'], queryFn: fetchUsuarios })
+}
+
+interface LoginInput {
+  idUsuario: number
+  pin: string
+  dispositivo: string
+}
+
+interface LoginRespuesta {
+  token: string
+  usuario: { id_usuario: number; nombre: string }
+  id_sesion: number
+}
+
+export function useLogin() {
+  return useMutation({
+    mutationFn: async (datos: LoginInput) => {
+      const resultado = await sheetsClient.apiPost('auth.login', {
+        id_usuario: datos.idUsuario,
+        pin: datos.pin,
+        dispositivo: datos.dispositivo
+      })
+      return resultado as LoginRespuesta
+    },
+    onSuccess: (resultado) => {
+      guardarSesion({
+        token: resultado.token,
+        idUsuario: resultado.usuario.id_usuario,
+        nombre: resultado.usuario.nombre
+      })
+    }
+  })
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => sheetsClient.apiPost('auth.logout'),
+    // onSettled, no onSuccess: si la revocación en el servidor falla (p.ej.
+    // sin conexión), igualmente queremos sacar a la persona de la app y
+    // vaciar la caché — quedarse "atascado" logueado localmente sería peor
+    // que un token que sigue activo en el servidor hasta que expire.
+    onSettled: () => {
+      borrarSesion()
+      queryClient.clear()
+    }
   })
 }

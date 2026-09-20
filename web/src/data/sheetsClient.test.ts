@@ -94,4 +94,43 @@ describe('apiPost', () => {
     )
     await expect(client.apiPost('plan.set', {})).rejects.toBeInstanceOf(SesionInvalidaError)
   })
+
+  it('propaga reintentar_en_s en el ApiError cuando la respuesta lo incluye (LOCKED_OUT)', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => null })
+    server.use(
+      http.post(BASE_URL, () =>
+        HttpResponse.json({
+          ok: false,
+          code: 'LOCKED_OUT',
+          error: 'demasiados intentos fallidos',
+          reintentar_en_s: 125
+        })
+      )
+    )
+    const promesa = client.apiPost('auth.login', { id_usuario: 1, pin: '000000' })
+    await expect(promesa).rejects.toMatchObject({ code: 'LOCKED_OUT', reintentarEnS: 125 })
+  })
+
+  it('deja reintentarEnS a undefined cuando la respuesta no trae reintentar_en_s', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => 't0k3n' })
+    server.use(http.post(BASE_URL, () => HttpResponse.json({ ok: false, code: 'INTERNAL', error: 'boom' })))
+    const promesa = client.apiPost('plan.set', {})
+    await expect(promesa).rejects.toMatchObject({ code: 'INTERNAL', reintentarEnS: undefined })
+  })
+
+  it('para auth.login, devuelve la respuesta completa en vez de json.result (la API no la envuelve)', async () => {
+    const client = createSheetsClient({ baseUrl: BASE_URL, getToken: () => null })
+    server.use(
+      http.post(BASE_URL, () =>
+        HttpResponse.json({ ok: true, token: 'abc123', usuario: { id_usuario: 1, nombre: 'Rafa' }, id_sesion: 9 })
+      )
+    )
+    const resultado = await client.apiPost('auth.login', { id_usuario: 1, pin: '123456' })
+    expect(resultado).toEqual({
+      ok: true,
+      token: 'abc123',
+      usuario: { id_usuario: 1, nombre: 'Rafa' },
+      id_sesion: 9
+    })
+  })
 })

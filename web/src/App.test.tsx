@@ -3,8 +3,10 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { addWeeks } from 'date-fns'
 import { http, HttpResponse } from 'msw'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server } from './test/mswServer'
+import { sembrarSesion } from './test/sembrarSesion'
+import { borrarSesion } from './data/session'
 import { formatearRangoSemana, lunesDe } from './shared/semanaDates'
 import App from './App'
 
@@ -15,6 +17,12 @@ beforeEach(() => {
   // mismo fichero: sin esto, un test que navega a /compra deja esa ruta activa
   // para el siguiente test.
   window.history.pushState({}, '', '/')
+  // App ahora vive detrás de AuthGate: sin sesión solo se vería el login.
+  sembrarSesion()
+})
+
+afterEach(() => {
+  borrarSesion()
 })
 
 function renderApp() {
