@@ -20,7 +20,7 @@ Telegram/WhatsApp, sugerencia automática de menú.
 | Comensales | Menú único para todos (Rafa + hijas). Sin platos por persona. |
 | Estructura del día | Un único turno, `COMIDA`, lunes a viernes. Modelado con campo `turno` para poder añadir `CENA` sin migrar datos. |
 | Restricciones | Etiquetas en los platos + reglas sobre etiquetas (`MAX_SEMANA`, `MIN_SEMANA`, `NO_CONSECUTIVO`). Avisos visuales, nunca bloqueo. |
-| Acceso a datos | Google Apps Script publicado como Web App = API JSON. Sin OAuth ni login en la tablet. |
+| Acceso a datos | Google Apps Script publicado como Web App = API JSON. **Decisión revertida el 2026-09-19** — ver "Login por usuario y compra compartida (implementado)": la app pasó de una tablet fija a varios móviles familiares, y el token de escritura compartido viajaba en claro en el bundle público. Ahora hay login por PIN y sesión por dispositivo. |
 | Hosting frontend | Netlify o Vercel, build estática. |
 
 ## Esquema de la hoja de Google
@@ -317,10 +317,12 @@ construyó originalmente esta funcionalidad.
   valor)}` — `error` refleja fallos de `useCatalogo`/`usePlan` y
   `ShoppingListPage` lo muestra como un aviso de "Sin conexión" distinto del
   estado "sin platos".
-- Estado de "ya comprado" en `localStorage`, clave `compra:${desde}:${hasta}` →
-  `{ "idIngrediente|unidad": true }`. Cada semana (actual/siguiente) tiene su
-  propio checklist independiente — es estado del momento, no dato del dominio,
-  no se escribe en la hoja.
+- Estado de "ya comprado": originalmente en `localStorage` (clave
+  `compra:${desde}:${hasta}` → `{ "idIngrediente|unidad": true }`), decisión
+  **revertida el 2026-09-19** — ver "Login por usuario y compra compartida
+  (implementado)". Era estado por dispositivo; con varios móviles en la
+  familia, cada uno veía su propio checklist en vez de uno compartido. Ahora
+  vive en la hoja (`compra_marcas`) y se sincroniza entre dispositivos.
 - `ShoppingListPage.tsx` — orquesta el selector de rango, el hook y el layout;
   incluye el botón "Copiar" que serializa `listas` como texto plano agrupado
   por proveedor (`PROVEEDOR\n- Nombre: cantidad unidad\n...`) vía
@@ -520,6 +522,68 @@ ver el detalle en "Sensores" más arriba. Corregido sustituyendo
 `PointerSensor` por `MouseSensor` y añadiendo `touch-action: manipulation`
 a los elementos arrastrables. Pendiente de que el usuario reverifique en
 la tablet real.
+
+## Login por usuario y compra compartida (implementado)
+
+Dos decisiones de la sección "Decisiones de producto" se revierten aquí,
+documentadas ahí mismo con un puntero a esta sección: "Sin OAuth ni login"
+y el estado de "comprado" en `localStorage`. Motivo de ambas: la app pasó
+de una tablet fija en la cocina a varios móviles familiares (Rafa, Lourdes,
+Paula, Laia), y con eso aparecieron dos problemas reales —
+`VITE_API_TOKEN` viajaba en claro en el bundle público de Netlify (token de
+escritura completo para cualquiera con la URL) y la lista de la compra no
+se compartía entre dispositivos (cada móvil tenía su propio checklist en
+`localStorage`).
+
+**Login por PIN.** Cada persona elige su nombre (lista pública vía
+`GET action=auth.usuarios`, sin necesitar sesión) y teclea un PIN de 6
+dígitos. Es solo puerta de entrada — sin roles, todo usuario validado ve y
+edita lo mismo, tal y como sigue diciendo "Comensales" arriba. El PIN se
+guarda hasheado (HMAC-SHA-256 iterado con un pepper en Script Properties,
+nunca en la hoja) con sal por usuario; Apps Script no tiene PBKDF2/bcrypt,
+así que el KDF es casero — ver el comentario en `Codigo.gs` y la sección de
+seguridad del plan de implementación (enlace abajo) para el análisis de qué
+protege esto y qué no frente a un PIN corto. El bloqueo por intentos
+fallidos (5 intentos, backoff exponencial con tope de 1h) es la defensa
+real contra fuerza bruta, no el hash.
+
+**Sesión sin caducidad, pero revocable.** El token de sesión sustituye por
+completo al antiguo `VITE_API_TOKEN`: ya no existe ningún secreto de
+escritura en el bundle, y `doGet`/`doPost` exigen sesión válida para todo
+excepto `auth.usuarios` y `auth.login`. El token no caduca (para no pedir
+el PIN cada dos por tres en un móvil personal) pero se puede revocar
+borrando la sesión desde el propio backend (`auth.logout`) o con las
+funciones de administración del editor de Apps Script.
+
+**Alta de usuarios — sin pantalla propia.** Se hace a mano desde el editor
+de Apps Script: `adminSetPin()` lee el nombre y el PIN de dos propiedades
+del script (`ADMIN_NOMBRE`/`ADMIN_PIN`), crea o actualiza el usuario, y
+borra ambas propiedades en un `finally` para que el PIN no quede escrito en
+ningún sitio. `adminInicializarAuth()` genera el pepper una sola vez.
+
+**Compra compartida.** El estado "ya comprado" pasa de `localStorage` a una
+hoja nueva (`compra_marcas`: `id, semana, id_ingrediente, unidad`) donde la
+sola presencia de la fila significa "comprado" — marcar añade, desmarcar
+borra, idempotente en ambos sentidos. El frontend lo sincroniza con una
+mutación optimista de TanStack Query (mismo patrón que las mutaciones del
+plan). Las marcas hechas sin cobertura (el caso real: el súper del sótano
+sin señal) se encolan vía `queryClient.setMutationDefaults` — necesario
+porque una mutación rehidratada desde el IndexedDB donde ya persiste la
+caché no conserva su `mutationFn` (es una función, no serializa) — y se
+reenvían solas al volver la conexión.
+
+**Corte de despliegue (2026-09-19):** sin puente de compatibilidad
+deliberadamente — se descartó aceptar el token viejo junto al nuevo para no
+mantener código de migración que luego hay que desmontar. El backend se
+publicó primero (rompiendo momentáneamente el frontend en producción, que
+aún llevaba el token viejo) y el frontend se desplegó justo después para
+minimizar la ventana. Verificado manualmente contra el backend real:
+selector de nombres, PIN incorrecto con el mensaje genérico correcto,
+sesión persistente tras recargar, y la app protegida detrás del login.
+
+Documentación completa de diseño, código de referencia de las primitivas
+criptográficas, y el análisis de qué protege esto y qué no:
+`docs/superpowers/plans/2026-09-19-login-y-compra-sincronizada.md`.
 
 ## Pendiente (ideas anotadas para después)
 
