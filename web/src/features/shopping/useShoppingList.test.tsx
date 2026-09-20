@@ -4,12 +4,18 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { server } from '../../test/mswServer'
+import { registrarMutationDefaults } from '../../data/mutationDefaults'
 import { useShoppingList } from './useShoppingList'
 
 const API_URL = 'https://script.example.com/exec'
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // marcarComprado usa useMarcarCompra, que ya no lleva su propio mutationFn:
+  // lo busca por mutationKey en el registro de setMutationDefaults, igual que
+  // en main.tsx. Cada test crea su propio QueryClient, así que hace falta
+  // registrarlo aquí también.
+  registrarMutationDefaults(queryClient)
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
 

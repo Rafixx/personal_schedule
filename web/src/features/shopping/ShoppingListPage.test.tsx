@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../test/mswServer'
+import { registrarMutationDefaults } from '../../data/mutationDefaults'
 import { fechasSemana, lunesDe } from '../../shared/semanaDates'
 import { ShoppingListPage } from './ShoppingListPage'
 
@@ -14,6 +15,11 @@ const fechaHoy = fechasSemana(lunesDe(new Date()))[0]
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // useMarcarCompra ya no lleva su propio mutationFn: lo busca por
+  // mutationKey en el registro de setMutationDefaults, igual que en
+  // main.tsx. Este test crea su propio QueryClient, así que hace falta
+  // registrarlo aquí también.
+  registrarMutationDefaults(queryClient)
   return (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/compra']}>{children}</MemoryRouter>

@@ -3,6 +3,7 @@ import { useIsMutating, useQueryClient } from '@tanstack/react-query'
 import type { RangoCompra } from './useShoppingList'
 import { semanaDeRango, useShoppingList } from './useShoppingList'
 import { useMarcasCompra } from '../../data/queries'
+import { MARCAR_COMPRA_MUTATION_KEY } from '../../data/mutationDefaults'
 import { ProviderGroup } from './ProviderGroup'
 import { formatoTextoCompra } from '../../domain/compra'
 import { lunesDe } from '../../shared/semanaDates'
@@ -23,7 +24,7 @@ export function ShoppingListPage() {
   // su forma pública. useIsMutating (por mutationKey) detecta el envío en
   // curso de marcarComprado sin necesidad de compartir esa instancia.
   const marcasCompra = useMarcasCompra(semana)
-  const marcandoCompra = useIsMutating({ mutationKey: ['compra.marcar'] }) > 0
+  const marcandoCompra = useIsMutating({ mutationKey: MARCAR_COMPRA_MUTATION_KEY }) > 0
 
   function refrescar() {
     queryClient.invalidateQueries({ queryKey: ['compra', semana] })

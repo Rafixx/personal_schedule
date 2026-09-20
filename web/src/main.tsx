@@ -8,6 +8,7 @@ import './index.css'
 import App from './App.tsx'
 import { SesionInvalidaError } from './data/sheetsClient'
 import { borrarSesion } from './data/session'
+import { registrarMutationDefaults } from './data/mutationDefaults'
 
 // Ante un token revocado o caducado (SesionInvalidaError, code:'UNAUTHENTICATED'
 // desde la hoja), cerramos la sesión y vaciamos la caché una única vez aquí en
@@ -32,6 +33,11 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: onErrorGlobal })
 })
 
+// Registrado antes de renderizar nada: si hay una mutación de "marcar
+// comprado" pausada por falta de red que se rehidrata desde IndexedDB, debe
+// encontrar aquí su mutationFn en cuanto se reconstruya.
+registrarMutationDefaults(queryClient)
+
 const persister = createAsyncStoragePersister({
   storage: {
     getItem: get,
@@ -42,7 +48,16 @@ const persister = createAsyncStoragePersister({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: 24 * 60 * 60 * 1000 }}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, maxAge: 24 * 60 * 60 * 1000 }}
+      // Tras rehidratar la caché (incluidas las mutaciones pausadas por falta
+      // de red), reenvía lo que quedó pendiente. Necesario para el caso en
+      // que el dispositivo ya está online al recargar la página: al no haber
+      // una transición offline→online, el resume automático de QueryClient
+      // (suscrito a onlineManager) no se dispararía solo.
+      onSuccess={() => queryClient.resumePausedMutations()}
+    >
       <App />
     </PersistQueryClientProvider>
   </StrictMode>

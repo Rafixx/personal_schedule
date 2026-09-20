@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { Catalogo, MarcaCompra, Orden, PlanEntry, Temporada, TipoRegla, Turno } from '../domain/types'
 import { sheetsClient } from './client'
+import { MARCAR_COMPRA_MUTATION_KEY, type MarcarCompraContext, type MarcarCompraInput } from './mutationDefaults'
 import { borrarSesion, guardarSesion } from './session'
 import type { FilaInvalida } from './schemas'
 import {
@@ -219,59 +220,18 @@ export function useMarcasCompra(semana: string) {
   return useQuery({ queryKey: ['compra', semana], queryFn: () => fetchMarcasCompra(semana) })
 }
 
-interface MarcarCompraInput {
-  semana: string
-  idIngrediente: number
-  unidad: string
-  comprado: boolean
-}
-
-// mutationKey (además de la mutationFn) para que quien no dispara la mutación
-// directamente —como el indicador de sincronización de ShoppingListPage—
-// pueda saber si hay una marca en curso vía useIsMutating.
+// El mutationFn y el ciclo optimista viven en mutationDefaults.ts, registrados
+// por clave vía setMutationDefaults: así una mutación pausada por falta de
+// red sobrevive a una recarga de página (rehidratada desde IndexedDB, sin
+// mutationFn propio) y puede reenviarse sola al volver la conexión. Este hook
+// se queda como un useMutation por mutationKey que hereda ese registro.
+//
+// mutationKey (además del mutationFn heredado) para que quien no dispara la
+// mutación directamente —como el indicador de sincronización de
+// ShoppingListPage— pueda saber si hay una marca en curso vía useIsMutating.
 export function useMarcarCompra() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationKey: ['compra.marcar'],
-    mutationFn: (args: MarcarCompraInput) =>
-      sheetsClient.apiPost('compra.marcar', {
-        semana: args.semana,
-        id_ingrediente: args.idIngrediente,
-        unidad: args.unidad,
-        comprado: args.comprado
-      }),
-    // compra.marcar es idempotente por diseño (marcar dos veces o desmarcar
-    // dos veces no hace nada la segunda vez), así que reintentar tras un
-    // fallo de red es seguro.
-    retry: 2,
-    onMutate: async (args) => {
-      const queryKey = ['compra', args.semana]
-      await queryClient.cancelQueries({ queryKey })
-      const previas = queryClient.getQueryData<MarcaCompra[]>(queryKey)
-      queryClient.setQueryData<MarcaCompra[]>(queryKey, (anteriores) => {
-        // Igual que useSetPlanEntry/useDeletePlanEntry: si todavía no hay datos
-        // (el GET inicial ni siquiera ha resuelto — cancelQueries lo acaba de
-        // descartar), NO sintetizamos una lista a partir de [], porque eso
-        // borraría de la vista marcas reales ya persistidas (p.ej. "leche"
-        // marcada desde otro dispositivo) que aún no habían llegado a esta
-        // caché. Se omite la actualización optimista en ese caso concreto; el
-        // POST sigue adelante igualmente y onSettled corrige el estado real.
-        if (!anteriores) return anteriores
-        const sinEsaMarca = anteriores.filter(
-          (m) => !(m.idIngrediente === args.idIngrediente && m.unidad === args.unidad)
-        )
-        if (!args.comprado) return sinEsaMarca
-        return [
-          ...sinEsaMarca,
-          { id: -Date.now(), semana: args.semana, idIngrediente: args.idIngrediente, unidad: args.unidad }
-        ]
-      })
-      return { previas, queryKey }
-    },
-    onError: (_err, _args, context) => {
-      if (context) queryClient.setQueryData(context.queryKey, context.previas)
-    },
-    onSettled: (_data, _err, args) => queryClient.invalidateQueries({ queryKey: ['compra', args.semana] })
+  return useMutation<unknown, Error, MarcarCompraInput, MarcarCompraContext>({
+    mutationKey: MARCAR_COMPRA_MUTATION_KEY
   })
 }
 

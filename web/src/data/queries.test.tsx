@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/mswServer'
+import { registrarMutationDefaults } from './mutationDefaults'
 import { borrarSesion, guardarSesion, leerSesion } from './session'
 import { ApiError } from './sheetsClient'
 import {
@@ -41,6 +42,10 @@ afterEach(() => {
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // useMarcarCompra ya no lleva su mutationFn: la busca por mutationKey en el
+  // registro de setMutationDefaults, igual que en main.tsx. Cada test crea su
+  // propio QueryClient, así que hay que registrarla aquí también.
+  registrarMutationDefaults(queryClient)
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
 
@@ -182,6 +187,7 @@ describe('useMarcarCompra', () => {
 
   it('actualiza la caché de ["compra", semana] al instante, antes de que resuelva el POST', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    registrarMutationDefaults(queryClient)
     queryClient.setQueryData(['compra', '2026-09-07'], [])
     function wrapperConCliente({ children }: { children: ReactNode }) {
       return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -211,6 +217,7 @@ describe('useMarcarCompra', () => {
 
   it('revierte la caché si el POST falla', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    registrarMutationDefaults(queryClient)
     const marcaExistente = { id: 1, semana: '2026-09-07', idIngrediente: 3, unidad: 'g' }
     queryClient.setQueryData(['compra', '2026-09-07'], [marcaExistente])
     function wrapperConCliente({ children }: { children: ReactNode }) {
@@ -234,6 +241,7 @@ describe('useMarcarCompra', () => {
     // distinto. onMutate no debe sintetizar [{azúcar}] a partir de undefined
     // — eso ocultaría "leche" hasta que onSettled corrigiera la caché.
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    registrarMutationDefaults(queryClient)
     function wrapperConCliente({ children }: { children: ReactNode }) {
       return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     }
